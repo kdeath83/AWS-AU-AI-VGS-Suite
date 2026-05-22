@@ -16,11 +16,10 @@ The suite is organized into four CDK stacks that map to the three VGS modules pl
 
 | Stack | Module | Purpose |
 |---|---|---|
-| **Shared** | Foundation | VPC, S3 Evidence Lake, KMS, IAM, CloudTrail, EventBridge |
-| **SECURE** | Security | Guardrails, WAF, GuardDuty, Inspector, Config, Secrets Manager |
 | **VALIDATE** | Compliance | Model Monitor, Clarify, Audit Manager, Neptune, AgentCore, Registry |
 | **GOVERN** | Governance | QuickSight, NL Summaries, Prompt Optimization, Escalation |
-
+| **SECURE** | Security | Guardrails, WAF, GuardDuty, Inspector, Config, Secrets Manager |
+| **Shared** | Foundation | VPC, S3 Evidence Lake, KMS, IAM, CloudTrail, EventBridge |
 ---
 
 ## Architecture
