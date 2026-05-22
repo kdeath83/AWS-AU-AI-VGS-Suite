@@ -1,5 +1,5 @@
 /**
- * src/lambda/shield/prompt-injection-detector/index.ts
+ * src/lambda/secure/prompt-injection-detector/index.ts
  * Detects and logs prompt injection attempts. Integrates with Bedrock Guardrails.
  * Memory: 256MB | Timeout: 10s
  */

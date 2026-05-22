@@ -13,7 +13,7 @@ Three CDK stacks deploy as a single app. Each stack maps to one module:
 
 ```
 AWS Organization (Hub Account)
-├── SHIELD Stack         → Security services, GuardDuty, WAF, Config
+├── SECURE Stack         → Security services, GuardDuty, WAF, Config
 ├── VALIDATE Stack       → Model monitoring, AgentCore, Agent Registry, Audit Manager
 ├── GOVERN Stack         → QuickSight dashboards, EventBridge, Bedrock NLG
 └── Shared Stack         → VPC, S3 Evidence Lake, KMS, IAM roles
@@ -23,7 +23,7 @@ AWS Organization (Hub Account)
 
 ## Module Specifications
 
-### SHIELD Stack
+### SECURE Stack
 
 | Component | AWS Service | Purpose |
 |-----------|-------------|---------|
@@ -93,7 +93,7 @@ AWS-AU-AI-VGS-Suite/
 │   │   └── app.ts                  # CDK app entry point
 │   ├── lib/
 │   │   ├── shared-stack.ts         # VPC, S3, KMS, base IAM
-│   │   ├── shield-stack.ts         # SHIELD module
+│   │   ├── secure-stack.ts         # SECURE module
 │   │   ├── validate-stack.ts       # VALIDATE module
 │   │   ├── govern-stack.ts         # GOVERN module
 │   │   ├── bedrock-prompt-optimization.ts  # Prompt optimization construct
@@ -104,10 +104,11 @@ AWS-AU-AI-VGS-Suite/
 │       └── cdk.test.ts
 ├── src/
 │   ├── lambda/                     # Lambda functions
-│   │   ├── shield/
+│   │   ├── secure/
 │   │   │   ├── prompt-injection-detector/
 │   │   │   ├── guardduty-finder-aggregator/
-│   │   │   └── patch-compliance-checker/
+│   │   │   ├── patch-compliance-checker/
+│   │   │   └── ai-resource-tagger/
 │   │   ├── validate/
 │   │   │   ├── model-drift-handler/
 │   │   │   ├── bias-report-generator/
@@ -214,7 +215,7 @@ AWS-AU-AI-VGS-Suite/
 npm install
 npx cdk bootstrap
 npx cdk deploy SharedStack
-npx cdk deploy ShieldStack
+npx cdk deploy SecureStack
 npx cdk deploy ValidateStack
 npx cdk deploy GovernStack
 ```
@@ -233,3 +234,4 @@ npx cdk deploy GovernStack
 
 *Design version: 1.0*
 *Date: 2026-05-22*
+

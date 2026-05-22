@@ -1,5 +1,5 @@
 /**
- * src/lambda/shield/patch-compliance-checker/index.ts
+ * src/lambda/secure/patch-compliance-checker/index.ts
  * Checks Systems Manager Patch Manager compliance and reports findings.
  * Memory: 256MB | Timeout: 60s
  */

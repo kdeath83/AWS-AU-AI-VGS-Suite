@@ -1,7 +1,7 @@
 {
   "name": "aws-au-ai-vgs-suite",
   "version": "1.0.0",
-  "description": "AWS AU AI VGS Suite - Validate, Govern, Shield for Australian Financial Services Institutions",
+  "description": "AWS AU AI VGS Suite - Validate, Govern, secure for Australian Financial Services Institutions",
   "private": true,
   "scripts": {
     "build": "tsc",

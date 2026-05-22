@@ -1,5 +1,5 @@
 /**
- * src/lambda/shield/ai-resource-tagger/index.ts
+ * src/lambda/secure/ai-resource-tagger/index.ts
  * AWS Config custom rule: validates that AI resources have required tags.
  * Required tags: Owner, DataClassification, ModelVersion
  */

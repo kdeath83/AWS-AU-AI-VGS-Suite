@@ -1,6 +1,6 @@
 # AWS AU AI VGS Suite
 
-> **Validate, Govern, Shield** — An AI Risk and Security Platform for Australian Financial Services Institutions.
+> **Validate, Govern, Secure** — An AI Risk and Security Platform for Australian Financial Services Institutions.
 
 [![AWS CDK](https://img.shields.io/badge/AWS-CDK%20v2-blue)](https://docs.aws.amazon.com/cdk/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
@@ -17,7 +17,7 @@ The suite is organized into four CDK stacks that map to the three VGS modules pl
 | Stack | Module | Purpose |
 |---|---|---|
 | **Shared** | Foundation | VPC, S3 Evidence Lake, KMS, IAM, CloudTrail, EventBridge |
-| **SHIELD** | Security | Guardrails, WAF, GuardDuty, Inspector, Config, Secrets Manager |
+| **SECURE** | Security | Guardrails, WAF, GuardDuty, Inspector, Config, Secrets Manager |
 | **VALIDATE** | Compliance | Model Monitor, Clarify, Audit Manager, Neptune, AgentCore, Registry |
 | **GOVERN** | Governance | QuickSight, NL Summaries, Prompt Optimization, Escalation |
 
@@ -30,7 +30,7 @@ The suite is organized into four CDK stacks that map to the three VGS modules pl
 │                         AWS AU AI VGS Suite                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
-│  │   SHARED    │  │   SHIELD    │  │  VALIDATE   │  │   GOVERN    │      │
+│  │   SHARED    │  │   SECURE    │  │  VALIDATE   │  │   GOVERN    │      │
 │  │  (Foundation)│  │  (Security) │  │ (Compliance)│  │ (Executive) │      │
 │  ├─────────────┤  ├─────────────┤  ├─────────────┤  ├─────────────┤      │
 │  │ • VPC       │  │ • Guardrails│  │ • Model Mon │  │ • QuickSight│      │
@@ -153,13 +153,13 @@ AWS-AU-AI-VGS-Suite/
 │   ├── lib/
 │   │   ├── constants.ts              # APRA/ASIC control mappings
 │   │   ├── shared-stack.ts           # VPC, S3, KMS, IAM, CloudTrail
-│   │   ├── shield-stack.ts           # Guardrails, WAF, GuardDuty, Config
+│   │   ├── secure-stack.ts           # Guardrails, WAF, GuardDuty, Config
 │   │   ├── validate-stack.ts         # Model Monitor, Clarify, Neptune, AgentCore
 │   │   └── govern-stack.ts           # QuickSight, NL Summaries, Escalation
 │   └── test/cdk.test.ts              # CDK snapshot tests
 ├── src/
 │   ├── lambda/
-│   │   ├── shield/                   # Prompt injection, GuardDuty, Patch
+│   │   ├── secure/                   # Prompt injection, GuardDuty, Patch
 │   │   ├── validate/                 # Drift handler, Bias reports, Evidence, Registry, Orchestrator
 │   │   └── govern/                   # Dashboard prep, NL summaries, Escalation, Prompt eval
 │   ├── prompts/                      # Bedrock prompt optimization JSONL templates
@@ -231,9 +231,9 @@ All stacks include:
 
 | Function | Stack | Memory | Timeout | Trigger |
 |---|---|---|---|---|
-| `prompt-injection-detector` | SHIELD | 256MB | 10s | API Gateway |
-| `guardduty-finder-aggregator` | SHIELD | 512MB | 60s | SQS (GuardDuty) |
-| `patch-compliance-checker` | SHIELD | 256MB | 60s | EventBridge (scheduled) |
+| `prompt-injection-detector` | secure | 256MB | 10s | API Gateway |
+| `guardduty-finder-aggregator` | secure | 512MB | 60s | SQS (GuardDuty) |
+| `patch-compliance-checker` | secure | 256MB | 60s | EventBridge (scheduled) |
 | `model-drift-handler` | VALIDATE | 512MB | 120s | SQS (Model Monitor) |
 | `bias-report-generator` | VALIDATE | 1024MB | 600s | SQS (Clarify) |
 | `audit-evidence-collector` | VALIDATE | 1024MB | 300s | SQS + EventBridge (6h) |

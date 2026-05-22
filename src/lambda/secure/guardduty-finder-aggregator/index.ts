@@ -1,5 +1,5 @@
 /**
- * src/lambda/shield/guardduty-finder-aggregator/index.ts
+ * src/lambda/secure/guardduty-finder-aggregator/index.ts
  * Aggregates GuardDuty findings and stores evidence in S3.
  * Memory: 512MB | Timeout: 60s
  */

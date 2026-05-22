@@ -7,7 +7,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { SharedStack } from '../lib/shared-stack';
-import { ShieldStack } from '../lib/shield-stack';
+import { ShieldStack } from '../lib/secure-stack';
 import { ValidateStack } from '../lib/validate-stack';
 import { GovernStack } from '../lib/govern-stack';
 
@@ -141,7 +141,7 @@ describe('CDK Stacks', () => {
       });
     });
 
-    it('should create Lambda functions for shield operations', () => {
+    it('should create Lambda functions for secure operations', () => {
       template.hasResourceProperties('AWS::Lambda::Function', {
         Runtime: 'nodejs22.x',
       });
@@ -236,3 +236,4 @@ describe('CDK Stacks', () => {
     });
   });
 });
+

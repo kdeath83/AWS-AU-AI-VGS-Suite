@@ -2,12 +2,12 @@
 /**
  * cdk/bin/app.ts
  * CDK application entry point for the AWS AU AI VGS Suite.
- * Orchestrates the four stacks: Shared, SHIELD, VALIDATE, GOVERN.
+ * Orchestrates the four stacks: Shared, SECURE, VALIDATE, GOVERN.
  */
 import * as cdk from 'aws-cdk-lib';
 import { AwsSolutionsChecks, NIST80053R5Checks, HIPAASecurityChecks } from 'cdk-nag';
 import { SharedStack } from '../lib/shared-stack';
-import { ShieldStack } from '../lib/shield-stack';
+import { SecureStack } from '../lib/secure-stack';
 import { ValidateStack } from '../lib/validate-stack';
 import { GovernStack } from '../lib/govern-stack';
 import { PROJECT_NAME, DEFAULT_REGION } from '../lib/constants';
@@ -41,9 +41,9 @@ const sharedStack = new SharedStack(app, `${PROJECT_NAME}-SharedStack`, {
   apraregion,
 });
 
-// ── SHIELD Stack ────────────────────────────────────────────────────────────
+// ── SECURE Stack ────────────────────────────────────────────────────────────
 
-const shieldStack = new ShieldStack(app, `${PROJECT_NAME}-ShieldStack`, {
+const secureStack = new SecureStack(app, `${PROJECT_NAME}-SecureStack`, {
   ...stackProps,
   environment,
   vpc: sharedStack.vpc,
@@ -79,7 +79,7 @@ const governStack = new GovernStack(app, `${PROJECT_NAME}-GovernStack`, {
 
 // ── Cross-Stack Dependencies ────────────────────────────────────────────────
 
-shieldStack.addDependency(sharedStack);
+secureStack.addDependency(sharedStack);
 validateStack.addDependency(sharedStack);
 governStack.addDependency(sharedStack);
 
@@ -87,7 +87,7 @@ governStack.addDependency(sharedStack);
 
 if (enableCdkNag) {
   // Apply to all stacks
-  const stacks = [sharedStack, shieldStack, validateStack, governStack];
+  const stacks = [sharedStack, secureStack, validateStack, governStack];
   stacks.forEach((stack) => {
     cdk.Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
     cdk.Aspects.of(stack).add(new NIST80053R5Checks());
@@ -98,3 +98,4 @@ if (enableCdkNag) {
 // ── Synth ───────────────────────────────────────────────────────────────────
 
 app.synth();
+

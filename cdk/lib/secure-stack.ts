@@ -1,6 +1,6 @@
 /**
- * cdk/lib/shield-stack.ts
- * SHIELD Stack: Security services for AI protection.
+ * cdk/lib/secure-stack.ts
+ * SECURE Stack: Security services for AI protection.
  * Bedrock Guardrails, WAFv2, API Gateway, GuardDuty, Inspector, Patch Manager,
  * AWS Config conformance pack, Secrets Manager, Config rules for AI compliance.
  */
@@ -24,7 +24,7 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import { Construct } from 'constructs';
 import { PROJECT_NAME } from './constants';
 
-export interface ShieldStackProps extends cdk.StackProps {
+export interface SecureStackProps extends cdk.StackProps {
   readonly environment: string;
   readonly vpc: ec2.Vpc;
   readonly evidenceBucket: s3.Bucket;
@@ -33,7 +33,7 @@ export interface ShieldStackProps extends cdk.StackProps {
   readonly baseRole: iam.Role;
 }
 
-export class ShieldStack extends cdk.Stack {
+export class SecureStack extends cdk.Stack {
   public readonly guardrailArn: string;
   public readonly webAclArn: string;
   public readonly apiGateway: apigw.RestApi;
@@ -41,7 +41,7 @@ export class ShieldStack extends cdk.Stack {
   public readonly secretsManagerSecret: secretsmanager.Secret;
   public readonly patchBaseline: ssm.CfnPatchBaseline;
 
-  constructor(scope: Construct, id: string, props: ShieldStackProps) {
+  constructor(scope: Construct, id: string, props: SecureStackProps) {
     super(scope, id, props);
 
     // ── Bedrock Guardrails ──────────────────────────────────────────────────
@@ -682,7 +682,7 @@ export class ShieldStack extends cdk.Stack {
       functionName: `${PROJECT_NAME}-prompt-injection-detector-${props.environment}`,
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('src/lambda/shield/prompt-injection-detector'),
+      code: lambda.Code.fromAsset('src/lambda/SECURE/prompt-injection-detector'),
       timeout: cdk.Duration.seconds(10),
       memorySize: 256,
       environment: {
@@ -701,7 +701,7 @@ export class ShieldStack extends cdk.Stack {
       functionName: `${PROJECT_NAME}-guardduty-aggregator-${props.environment}`,
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('src/lambda/shield/guardduty-finder-aggregator'),
+      code: lambda.Code.fromAsset('src/lambda/SECURE/guardduty-finder-aggregator'),
       timeout: cdk.Duration.seconds(60),
       memorySize: 512,
       environment: {
@@ -725,7 +725,7 @@ export class ShieldStack extends cdk.Stack {
       functionName: `${PROJECT_NAME}-patch-compliance-${props.environment}`,
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('src/lambda/shield/patch-compliance-checker'),
+      code: lambda.Code.fromAsset('src/lambda/SECURE/patch-compliance-checker'),
       timeout: cdk.Duration.seconds(60),
       memorySize: 256,
       environment: {
@@ -754,3 +754,4 @@ export class ShieldStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'SecretsManagerArn', { value: this.secretsManagerSecret.secretArn });
   }
 }
+
