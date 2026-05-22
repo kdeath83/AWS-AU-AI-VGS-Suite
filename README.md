@@ -349,4 +349,4 @@ For issues or questions, please open a GitHub issue or contact the maintainers.
 
 ---
 
-*Built with AWS CDK v2, TypeScript, and ❤️ for Australian FSI compliance.*
+*Built with AWS CDK v2, TypeScript, and ❤️ for Australian FSIs.*
