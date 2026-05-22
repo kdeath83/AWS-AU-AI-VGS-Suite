@@ -10,7 +10,7 @@
 
 ## Overview
 
-The **AWS AU AI VGS Suite** is a production-ready proof-of-concept that provides a comprehensive, one-click-deployable AI risk and security platform tailored for Australian Financial Services Institutions (AFSI) operating under **APRA CPS 234**, **APRA CPS 230**, and **ASIC 26-092MR** regulatory frameworks.
+The **AWS AU AI VGS Suite** is a production-ready proof-of-concept that provides a comprehensive, one-click-deployable AI risk and security platform tailored for Australian Financial Services Institutions (AFSI) operating under **APRA CPS 234**, **APRA CPS 230**, and **ASIC 26-092MR** regulatory expectations.
 
 The suite is organized into four CDK stacks that map to the three VGS modules plus a shared foundation:
 
