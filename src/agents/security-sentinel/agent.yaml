@@ -1,0 +1,47 @@
+name: security-sentinel
+version: 1.0.0
+description: Monitors AI endpoints and security findings for Australian FSI
+foundation_model: anthropic.claude-3-sonnet-20240229-v1:0
+idle_session_ttl: 1800
+tags:
+  project: aws-au-ai-vgs-suite
+  compliance: APRA-CPS-234
+  type: security
+
+# AgentCore Runtime Configuration
+runtime:
+  max_tokens: 4096
+  temperature: 0.2
+  top_p: 0.9
+
+# MCP Server integrations
+mcp_servers:
+  - server_id: guardduty-inspector
+    endpoint: arn:aws:bedrock-agentcore:::mcp-server/guardduty-inspector
+    description: Reads GuardDuty findings and Inspector vulnerability scans
+    required_permissions:
+      - guardduty:GetFindings
+      - guardduty:ListFindings
+      - inspector2:ListFindings
+      - inspector2:GetFindings
+
+# Guardrail configuration
+guardrails:
+  topic_restriction:
+    - name: FinancialAdvice
+      action: BLOCK
+    - name: ConfidentialDataExfiltration
+      action: BLOCK
+  pii_redaction:
+    - type: AUSTRALIAN_TAX_FILE_NUMBER
+      action: BLOCK
+    - type: BANK_ACCOUNT_NUMBER
+      action: BLOCK
+    - type: CREDIT_DEBIT_CARD_NUMBER
+      action: BLOCK
+
+# Observability
+observability:
+  tracing_enabled: true
+  logging_level: INFO
+  metrics_namespace: VGS/SecuritySentinel

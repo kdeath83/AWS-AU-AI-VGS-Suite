@@ -1,0 +1,42 @@
+name: audit-manager
+version: 1.0.0
+description: MCP server for reading Audit Manager assessments and evidence
+protocol: 2024-11-05
+capabilities:
+  tools:
+    - name: get_assessment_summary
+      description: Retrieve summary of an Audit Manager assessment
+      parameters:
+        assessment_arn:
+          type: string
+          description: ARN of the assessment
+    - name: get_control_evidence
+      description: Retrieve evidence for a specific control
+      parameters:
+        assessment_id:
+          type: string
+          description: Assessment ID
+        control_set_id:
+          type: string
+          description: Control set ID
+        control_id:
+          type: string
+          description: Control ID
+        evidence_folder_id:
+          type: string
+          description: Evidence folder ID
+    - name: list_non_compliant_controls
+      description: List controls with non-compliant status
+      parameters:
+        assessment_arn:
+          type: string
+          description: ARN of the assessment
+        framework:
+          type: string
+          description: Compliance framework name
+    - name: get_compliance_score
+      description: Calculate overall compliance score
+      parameters:
+        assessment_arn:
+          type: string
+          description: ARN of the assessment

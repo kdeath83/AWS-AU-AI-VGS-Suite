@@ -1,0 +1,44 @@
+name: guardduty-inspector
+version: 1.0.0
+description: MCP server for reading GuardDuty findings and Inspector vulnerability scans
+protocol: 2024-11-05
+capabilities:
+  tools:
+    - name: get_guardduty_findings
+      description: Retrieve GuardDuty findings by severity, type, or time range
+      parameters:
+        severity_levels:
+          type: array
+          items:
+            enum: [LOW, MEDIUM, HIGH, CRITICAL]
+          description: Filter by severity levels
+        finding_types:
+          type: array
+          items:
+            type: string
+          description: Filter by finding types
+        time_range_hours:
+          type: integer
+          description: Lookback period in hours
+    - name: get_inspector_findings
+      description: Retrieve Inspector vulnerability findings for resources
+      parameters:
+        resource_arns:
+          type: array
+          items:
+            type: string
+          description: Filter by specific resource ARNs
+        severity_levels:
+          type: array
+          items:
+            enum: [INFORMATIONAL, LOW, MEDIUM, HIGH, CRITICAL]
+          description: Filter by vulnerability severity
+    - name: summarize_security_posture
+      description: Generate a summary of current security posture
+      parameters:
+        account_id:
+          type: string
+          description: AWS account ID to analyze
+        region:
+          type: string
+          description: AWS region to analyze
