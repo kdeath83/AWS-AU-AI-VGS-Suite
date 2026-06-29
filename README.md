@@ -63,6 +63,12 @@ The suite is organized into four CDK stacks that map to the three VGS modules pl
 
 ### One-Click Deployment
 
+[![Launch Stack](https://cdn.rawgit.com/build-cloudformation-resources/cloudformation-launch-stack-button-svg/main/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/create/review?templateURL=https://raw.githubusercontent.com/kdeath83/AWS-AU-AI-VGS-Suite/main/cloudformation/bootstrap.yaml&stackName=aws-vgs-suite-bootstrap&param_Environment=dev)
+
+Click the button above to launch a CloudFormation stack that creates a CodeBuild project. The project clones this repo and runs `cdk deploy --all` — full deployment in one click. Requires AdministratorAccess (the stack creates IAM roles for CDK).
+
+Or deploy manually from the CLI:
+
 ```bash
 # Clone the repository
 git clone https://github.com/kdeath83/AWS-AU-AI-VGS-Suite.git

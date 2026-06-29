@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS VGS Suite — One-click deploy via CloudFormation. Creates IAM role + CodeBuild project to deploy all CDK stacks.'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test, prod]
+    Description: Deployment environment name
+
+Resources:
+  CDKBootstrapRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'aws-vgs-suite-deploy-${Environment}'
+      Description: Role for CDK bootstrapping and deployment
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  DeployProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub 'aws-vgs-suite-deploy-${Environment}'
+      Description: One-click deploy for AWS VGS Suite
+      Source:
+        Type: GITHUB
+        Location: https://github.com/kdeath83/AWS-AU-AI-VGS-Suite.git
+      SourceVersion: main
+      Environment:
+        Type: ARM_CONTAINER
+        ComputeType: BUILD_GENERAL1_LARGE
+        Image: aws/codebuild/amazonlinux2-aarch64-standard:3.0
+        EnvironmentVariables:
+          - Name: ENVIRONMENT
+            Value: !Ref Environment
+      ServiceRole: !GetAtt CDKBootstrapRole.Arn
+      BuildSpec: |
+        version: 0.2
+        phases:
+          install:
+            runtime-versions:
+              nodejs: 22
+            commands:
+              - npm install -g aws-cdk
+              - npm install
+          build:
+            commands:
+              - npx cdk bootstrap --require-approval never
+              - npx cdk deploy --all --require-approval never -c environment=${ENVIRONMENT}
+
+Outputs:
+  DeployProjectName:
+    Value: !Ref DeployProject
+    Description: 'CodeBuild project name. Run: aws codebuild start-build --project-name <name>'
+  DeployCommand:
+    Value: !Sub 'aws codebuild start-build --project-name ${DeployProject}'
+    Description: Trigger deployment with this command
