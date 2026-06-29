@@ -128,7 +128,7 @@
 <body>
 
 <header>
-  <h1><span>VGS</span> Suite — Multi-Model Router</h1>
+  <h1><span>AWS VGS</span> Suite — Multi-Model Router</h1>
   <span class="badge">June 2026</span>
 </header>
 
@@ -280,6 +280,18 @@ function render() {
   // ── Pool table ──
   const tbody = document.querySelector('#poolTable tbody');
   const totalWeight = tier.models.reduce((s, m) => s + m.weight, 0);
+  // ── Add Model row (must compute BEFORE innerHTML assignment) ──
+  const existingIds = tier.models.map(m => m.id);
+  const availableToAdd = AVAILABLE_MODELS.filter(m => !existingIds.includes(m.id));
+  const addRowHTML = availableToAdd.length > 0 ? `<tr class="add-model-row">
+    <td colspan="5" style="padding:0.4rem 0.5rem;">
+      <select id="addModelSelect">${availableToAdd.map(m => `<option value="${m.id}">${m.id}</option>`).join('')}</select>
+      <span style="color:var(--muted);margin:0 0.3rem;">weight</span>
+      <input id="addModelWeight" type="number" min="1" max="100" value="10">
+      <button class="add-btn" onclick="addModel()" style="margin-left:0.5rem;">+ Add Model</button>
+    </td>
+  </tr>` : '';
+
   tbody.innerHTML = tier.models.map(m => {
     const share = totalWeight > 0 ? ((m.weight / totalWeight) * 100).toFixed(0) : (m.primary ? 'primary' : 'fallback');
     const providerClass = m.provider.includes('Anthropic') ? 'provider-bedrock' :
@@ -297,18 +309,6 @@ function render() {
       <td><button class="delete-btn" onclick="removeModel('${m.id}')" title="Remove model">✕</button></td>
     </tr>`;
   }).join('') + addRowHTML;
-
-  // ── Add Model row ──
-  const existingIds = tier.models.map(m => m.id);
-  const availableToAdd = AVAILABLE_MODELS.filter(m => !existingIds.includes(m.id));
-  const addRowHTML = availableToAdd.length > 0 ? `<tr class="add-model-row">
-    <td colspan="5" style="padding:0.4rem 0.5rem;">
-      <select id="addModelSelect">${availableToAdd.map(m => `<option value="${m.id}">${m.id}</option>`).join('')}</select>
-      <span style="color:var(--muted);margin:0 0.3rem;">weight</span>
-      <input id="addModelWeight" type="number" min="1" max="100" value="10">
-      <button class="add-btn" onclick="addModel()" style="margin-left:0.5rem;">+ Add Model</button>
-    </td>
-  </tr>` : '';
 
   document.getElementById('totalWeight').textContent = totalWeight;
   document.getElementById('providerCount').textContent = new Set(tier.models.map(m => m.provider)).size;
