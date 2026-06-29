@@ -12,6 +12,10 @@
 
 The **AWS AU AI VGS Suite** is a production-ready proof-of-concept that provides a comprehensive, one-click-deployable AI risk and security platform tailored for Australian Financial Services Institutions (AFSI) operating under **APRA CPS 234**, **APRA CPS 230**, and **ASIC 26-092MR** regulatory expectations.
 
+**🖥 [Live Demo: Multi-Model Weighted Router](https://kdeath83.github.io/AWS-AU-AI-VGS-Suite/demo/multi-model-router.html)** — Drag any Bedrock model into any priority tier. Adjust weights live. Run 10K simulations. Watch the distribution converge.
+
+📄 **[Multi-Model Consistency Guide](docs/multi-model-consistency-banking.md)** — How to use Opus 4.8 + GPT-5.5 for critical banking operations without fine-tuning.
+
 The suite is organized into four CDK stacks that map to the three VGS modules plus a shared foundation:
 
 | Stack | Module | Purpose |
@@ -333,14 +337,18 @@ Two routing modes — **weighted distribution** for high-priority tiers and **fa
 | **MEDIUM** | Sonnet 4.6 → DeepSeek Pro → GPT-5.5 | DeepSeek Pro → Sonnet 4.6 → DeepSeek Flash |
 | **LOW** | DeepSeek Flash → DeepSeek Pro → Sonnet 4.6 | DeepSeek Flash → DeepSeek Pro → Sonnet 4.6 |
 
-**Model lineup (June 2026):**
-- Claude Fable 5 — Anthropic's top tier, frontier reasoning & agentic tasks
-- Claude Opus 4.8 — Highest GA Opus, complex reasoning & long-horizon agents
-- Claude Sonnet 4.6 — Production default, near-Opus at lower cost
-- GPT-5.5 — OpenAI's most advanced frontier model on Bedrock
-- DeepSeek V4 Pro/Flash — Cost-optimized via OpenCode Go
+**Model lineup (June 2026) — 20 models across 10 providers on AWS Bedrock:**
+- **Anthropic**: Claude Fable 5, Opus 4.8, Opus 4.7, Sonnet 4.6, Haiku 4.5
+- **OpenAI**: GPT-5.5, GPT-5.4
+- **Amazon**: Nova Premier, Nova Pro, Nova Lite
+- **Meta**: Llama 4 Maverick, Llama 4 Scout, Llama 3.3 70B
+- **Mistral**: Mistral Large 3, Mistral Small 4
+- **DeepSeek**: V4 Pro, V4 Flash (via OpenCode Go)
+- **Qwen**: Qwen3 235B
+- **Z.AI**: GLM 5.1
+- **Moonshot**: Kimi K2.6
 
-Adjust weights in `src/shared/model-router.ts` — no infrastructure deploy needed.
+Adjust weights in `src/shared/model-router.ts` — no infrastructure deploy needed. See the **[live demo](https://kdeath83.github.io/AWS-AU-AI-VGS-Suite/demo/multi-model-router.html)** to experiment with different weight distributions.
 
 For guidance on using multiple models for consistent outcomes in critical banking operations (customer deposits, etc.), see **[docs/multi-model-consistency-banking.md](docs/multi-model-consistency-banking.md)**.
 
