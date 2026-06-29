@@ -86,7 +86,7 @@ fi
 
 # ── Deploy all stacks ───────────────────────────────────────────────────────
 echo "🚀 Deploying all stacks..."
-echo "   Order: SharedStack → ShieldStack → ValidateStack → GovernStack"
+echo "   Order: SharedStack → SecureStack → ValidateStack → GovernStack"
 echo ""
 
 if [ -n "$SKIP_NAG" ]; then
@@ -103,7 +103,25 @@ else
 fi
 
 echo ""
-echo "✅ Deployment complete!"
+echo "✅ Infrastructure deployment complete!"
+echo ""
+
+# ── Create AgentCore Harnesses ────────────────────────────────────────────────
+echo "🤖 Creating AgentCore Harnesses with model load balancing..."
+echo "   (This requires the OpenCode Go API key for DeepSeek access)"
+echo ""
+if bash "$SCRIPT_DIR/create-harnesses.sh" \
+    --environment "$ENVIRONMENT" \
+    --region "$APRAREGION" \
+    --api-key "${OPENCODE_GO_API_KEY:-}"; then
+    echo ""
+    echo "✅ Harnesses created!"
+else
+    echo ""
+    echo "⚠️  Harness creation skipped or failed. Run manually:"
+    echo "   ./scripts/create-harnesses.sh --environment $ENVIRONMENT --region $APRAREGION"
+fi
+
 echo ""
 echo "Stack outputs:"
 npx cdk list --context environment="$ENVIRONMENT" --context apraregion="$APRAREGION"

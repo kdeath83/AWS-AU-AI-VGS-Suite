@@ -278,14 +278,9 @@ export class SecureStack extends cdk.Stack {
         statements: [
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
-            principals: [new iam.AnyPrincipal()],
+            principals: [new iam.AccountPrincipal(cdk.Stack.of(this).account)],
             actions: ['execute-api:Invoke'],
             resources: ['execute-api:/*/*/*'],
-            conditions: {
-              StringEquals: {
-                'aws:RequestedRegion': cdk.Stack.of(this).region,
-              },
-            },
           }),
         ],
       }),
@@ -303,6 +298,7 @@ export class SecureStack extends cdk.Stack {
       requestTemplates: { 'application/json': '{"statusCode": 200}' },
     }), {
       methodResponses: [{ statusCode: '200' }],
+      authorizationType: apigw.AuthorizationType.IAM,
     });
 
     // ── GuardDuty ─────────────────────────────────────────────────────────────
@@ -540,9 +536,7 @@ export class SecureStack extends cdk.Stack {
       Source:
         Owner: AWS
         SourceIdentifier: CLOUD_TRAIL_ENABLED
-      InputParameters:
-        s3BucketName: ''
-        snsTopicArn: ''
+      # Bucket monitored automatically by config rule; no explicit params needed
       Scope:
         ComplianceResourceTypes:
           - AWS::CloudTrail::Trail

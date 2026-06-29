@@ -7,7 +7,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { SharedStack } from '../lib/shared-stack';
-import { ShieldStack } from '../lib/secure-stack';
+import { SecureStack } from '../lib/secure-stack';
 import { ValidateStack } from '../lib/validate-stack';
 import { GovernStack } from '../lib/govern-stack';
 
@@ -21,7 +21,7 @@ describe('CDK Stacks', () => {
     apraregion: 'ap-southeast-2',
   });
 
-  const shieldStack = new ShieldStack(app, 'TestShieldStack', {
+  const shieldStack = new SecureStack(app, 'TestSecureStack', {
     env,
     environment: 'test',
     vpc: sharedStack.vpc,
@@ -99,7 +99,7 @@ describe('CDK Stacks', () => {
     });
   });
 
-  describe('ShieldStack', () => {
+  describe('SecureStack', () => {
     const template = Template.fromStack(shieldStack);
 
     it('should create a WAF WebACL', () => {
@@ -223,7 +223,7 @@ describe('CDK Stacks', () => {
   });
 
   describe('Cross-Stack Dependencies', () => {
-    it('should have SharedStack as dependency for ShieldStack', () => {
+    it('should have SharedStack as dependency for SecureStack', () => {
       expect(shieldStack.dependencies).toContain(sharedStack);
     });
 

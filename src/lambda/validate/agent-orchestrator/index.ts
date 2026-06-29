@@ -1,101 +1,244 @@
 /**
  * src/lambda/validate/agent-orchestrator/index.ts
- * Coordinates agent tasks via Bedrock AgentCore Runtime.
+ * Coordinates agent tasks via AgentCore Harness with model load balancing.
+ * Routes tasks to models based on priority and task type.
+ *
  * Memory: 512MB | Timeout: 300s
  */
 
 import { SQSEvent, SQSRecord, Context, SQSBatchResponse } from 'aws-lambda';
-import { BedrockAgentRuntimeClient, InvokeAgentCommand } from '@aws-sdk/client-bedrock-agent-runtime';
+import {
+  BedrockAgentCoreClient,
+  InvokeHarnessCommand,
+} from '@aws-sdk/client-bedrock-agentcore';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { logInfo, logError, logWarn, withRetry, CircuitBreaker } from '../../../shared/utils';
 import { getEnvVar } from '../../../shared/config';
 import { AgentOrchestratorEvent, RiskClassification } from '../../../shared/types';
+import {
+  selectModel,
+  buildHarnessModelPayload,
+  ModelConfig,
+} from '../../../shared/model-router';
 
-const bedrockClient = new BedrockAgentRuntimeClient({ region: process.env.AWS_REGION });
+const agentCoreClient = new BedrockAgentCoreClient({ region: process.env.AWS_REGION });
 const eventBridgeClient = new EventBridgeClient({ region: process.env.AWS_REGION });
 
 const eventBusName = getEnvVar('EVENT_BUS_NAME');
-const securitySentinelAgentId = getEnvVar('SECURITY_SENTINEL_AGENT_ID');
-const governanceAuditorAgentId = getEnvVar('GOVERNANCE_AUDITOR_AGENT_ID');
+const securityHarnessArn = getEnvVar('SECURITY_HARNESS_ARN');
+const governanceHarnessArn = getEnvVar('GOVERNANCE_HARNESS_ARN');
+// Optional: AgentCore Identity API key credential ARN for 3rd-party providers
+const identityApiKeyArn = process.env.IDENTITY_API_KEY_ARN || undefined;
 
-// Circuit breaker for Bedrock AgentCore calls
-const bedrockCircuitBreaker = new CircuitBreaker('bedrock-agentcore', {
+// Circuit breaker for AgentCore Harness calls
+const harnessCircuitBreaker = new CircuitBreaker('agentcore-harness', {
   failureThreshold: 5,
   recoveryTimeoutMs: 30000,
   halfOpenMaxCalls: 3,
 });
 
-interface AgentTaskResult {
-  agentId: string;
+// ── Types ──────────────────────────────────────────────────────────────────
+
+interface HarnessResult {
+  harnessArn: string;
   success: boolean;
   response?: string;
+  modelUsed: string;
+  error?: string;
+  attempts: number;
+  routingMode: 'weighted' | 'failover';
+}
+
+interface HarnessInvocationTracking {
+  harnessArn: string;
+  modelConfig: ModelConfig;
+  attempt: number;
   error?: string;
 }
 
-async function invokeAgent(
-  agentId: string,
+// ── Harness Resolution ─────────────────────────────────────────────────────
+
+/** Maps logical agent names to harness ARNs */
+function resolveHarnessArn(agentName: string): string {
+  switch (agentName) {
+    case 'security-sentinel':
+      return securityHarnessArn;
+    case 'governance-auditor':
+      return governanceHarnessArn;
+    default:
+      throw new Error(`Unknown harness target: ${agentName}`);
+  }
+}
+
+/** Picks the right system prompt based on harness type */
+function getSystemPrompt(agentName: string): string {
+  switch (agentName) {
+    case 'security-sentinel':
+      return `You are the Security Sentinel, an AI security monitoring agent for an Australian Financial Services Institution.
+Your responsibilities:
+1. Monitor AI endpoints for anomalous behavior, prompt injection attempts, and data exfiltration
+2. Read and analyze GuardDuty findings related to AI workloads
+3. Read and analyze Inspector vulnerability scan results
+4. Generate security incident reports with severity classification
+5. Escalate critical findings via EventBridge
+
+Always comply with APRA CPS 234 security requirements. Be concise and direct.`;
+    case 'governance-auditor':
+      return `You are the Governance Auditor, a compliance validation agent for an Australian Financial Services Institution.
+Your responsibilities:
+1. Validate compliance controls against APRA CPS 234 and CPS 230 frameworks
+2. Read Audit Manager assessment results and evidence
+3. Read AWS Config compliance rules and evaluations
+4. Identify compliance gaps and recommend remediation
+5. Generate board-ready compliance summaries
+
+Always provide evidence-based conclusions. Be concise and direct.`;
+    default:
+      return '';
+  }
+}
+
+// ── Harness Invocation with Fallback ────────────────────────────────────────
+
+async function invokeHarnessWithFallback(
+  harnessArn: string,
+  agentName: string,
   inputText: string,
   correlationId: string,
-): Promise<AgentTaskResult> {
+  priority: RiskClassification,
+  taskType: string,
+): Promise<HarnessResult> {
   const sessionId = `session-${correlationId}-${Date.now()}`;
+  const route = selectModel(taskType, priority);
+  const { primary, fallbacks } = route;
+  const modelChain = [primary, ...fallbacks];
 
-  try {
-    const response = await bedrockCircuitBreaker.execute(
-      async () => {
-        const command = new InvokeAgentCommand({
-          agentId,
-          agentAliasId: 'TSTALIASID', // Use test alias for POC
-          sessionId,
-          inputText,
-          enableTrace: true,
-        });
-        return withRetry(
-          async () => bedrockClient.send(command),
-          { maxAttempts: 3, baseDelayMs: 1000, maxDelayMs: 5000 },
-          { agentId, correlationId },
-        );
-      },
-      { agentId, correlationId },
-    );
+  const tracking: HarnessInvocationTracking[] = [];
 
-    // Extract response text
-    let responseText = '';
-    if (response.completion) {
-      for await (const chunk of response.completion) {
-        if (chunk.chunk?.bytes) {
-          responseText += Buffer.from(chunk.chunk.bytes).toString('utf-8');
+  for (let i = 0; i < modelChain.length; i++) {
+    const modelConfig = modelChain[i];
+    const attempt = i + 1;
+
+    try {
+      const result = await harnessCircuitBreaker.execute(
+        async () => {
+          const modelPayload = buildHarnessModelPayload(
+            identityApiKeyArn
+              ? { ...modelConfig, apiKeyArn: identityApiKeyArn }
+              : modelConfig,
+          );
+
+          const command = new InvokeHarnessCommand({
+            harnessArn,
+            runtimeSessionId: sessionId,
+            model: modelPayload,
+            systemPrompt: [{ text: getSystemPrompt(agentName) }],
+            messages: [
+              { role: 'user', content: [{ text: inputText }] },
+            ],
+          });
+
+          return withRetry(
+            async () => agentCoreClient.send(command),
+            { maxAttempts: 2, baseDelayMs: 500, maxDelayMs: 3000 },
+            { harnessArn, modelId: modelConfig.modelId, correlationId, attempt },
+          );
+        },
+        { harnessArn, modelId: modelConfig.modelId, correlationId, attempt },
+      );
+
+      // Extract response from streaming completion
+      let responseText = '';
+      if (result.completion) {
+        for await (const chunk of result.completion) {
+          if (chunk.chunk?.bytes) {
+            responseText += Buffer.from(chunk.chunk.bytes).toString('utf-8');
+          }
         }
       }
+
+      logInfo('Harness invocation succeeded', {
+        correlationId,
+        harnessArn: harnessArn.substring(harnessArn.lastIndexOf(':') + 1),
+        model: modelConfig.modelId,
+        attempt,
+        provider: modelConfig.provider,
+        routingMode: route.mode,
+        ...(route.weightedPool ? { weightedPool: route.weightedPool } : {}),
+      });
+
+      return {
+        harnessArn,
+        success: true,
+        response: responseText,
+        modelUsed: modelConfig.modelId,
+        attempts: attempt,
+        routingMode: route.mode,
+      };
+    } catch (error) {
+      const errMsg = (error as Error).message;
+      tracking.push({ harnessArn, modelConfig, attempt, error: errMsg });
+
+      logWarn('Harness invocation failed, trying fallback', {
+        correlationId,
+        model: modelConfig.modelId,
+        attempt,
+        error: errMsg,
+        fallbacksRemaining: modelChain.length - i - 1,
+      });
+
+      // Continue to next model in the fallback chain
     }
-
-    return {
-      agentId,
-      success: true,
-      response: responseText,
-    };
-  } catch (error) {
-    return {
-      agentId,
-      success: false,
-      error: (error as Error).message,
-    };
   }
+
+  // All models exhausted
+  logError('All harness models exhausted', new Error('No fallbacks remaining'), {
+    correlationId,
+    harnessArn: harnessArn.substring(harnessArn.lastIndexOf(':') + 1),
+    attempts: tracking,
+  });
+
+  return {
+    harnessArn,
+    success: false,
+    error: `All ${modelChain.length} models failed. Last: ${tracking[tracking.length - 1]?.error}`,
+    modelUsed: modelChain[modelChain.length - 1].modelId,
+    attempts: modelChain.length,
+    routingMode: route.mode,
+  };
 }
 
-function resolveAgentId(targetId: string): string {
-  switch (targetId) {
-    case 'security-sentinel':
-      return securitySentinelAgentId;
-    case 'governance-auditor':
-      return governanceAuditorAgentId;
+// ── Task Builder ───────────────────────────────────────────────────────────
+
+function buildTaskInput(task: AgentOrchestratorEvent): string {
+  switch (task.taskType) {
+    case 'SECURITY_SCAN':
+      return `Perform a security scan. Input data: ${JSON.stringify(task.inputData)}`;
+    case 'COMPLIANCE_CHECK':
+      return `Run a compliance check against APRA CPS 234/230. Input data: ${JSON.stringify(task.inputData)}`;
+    case 'INCIDENT_RESPONSE':
+      return `Respond to a security incident. Analyze and recommend actions. Input data: ${JSON.stringify(task.inputData)}`;
+    case 'AUDIT_EVIDENCE':
+      return `Collect and analyze audit evidence. Input data: ${JSON.stringify(task.inputData)}`;
     default:
-      return targetId;
+      return `Execute task. Input data: ${JSON.stringify(task.inputData)}`;
   }
 }
 
-async function executeTask(task: AgentOrchestratorEvent, requestId: string): Promise<AgentTaskResult[]> {
+// ── Orchestration ──────────────────────────────────────────────────────────
+
+interface OrchestrationResult {
+  agentName: string;
+  harnessResult: HarnessResult;
+}
+
+async function executeTask(
+  task: AgentOrchestratorEvent,
+  requestId: string,
+): Promise<OrchestrationResult[]> {
   const correlationId = task.correlationId;
-  const results: AgentTaskResult[] = [];
+  const results: OrchestrationResult[] = [];
+  const inputText = buildTaskInput(task);
 
   logInfo('Executing agent orchestration task', {
     requestId,
@@ -105,84 +248,90 @@ async function executeTask(task: AgentOrchestratorEvent, requestId: string): Pro
     priority: task.priority,
   });
 
-  // Build task-specific input text
-  let inputText = '';
-  switch (task.taskType) {
-    case 'SECURITY_SCAN':
-      inputText = `Perform a security scan. Input data: ${JSON.stringify(task.inputData)}`;
-      break;
-    case 'COMPLIANCE_CHECK':
-      inputText = `Run a compliance check. Input data: ${JSON.stringify(task.inputData)}`;
-      break;
-    case 'INCIDENT_RESPONSE':
-      inputText = `Respond to a security incident. Input data: ${JSON.stringify(task.inputData)}`;
-      break;
-    case 'AUDIT_EVIDENCE':
-      inputText = `Collect and analyze audit evidence. Input data: ${JSON.stringify(task.inputData)}`;
-      break;
-    default:
-      inputText = `Execute task. Input data: ${JSON.stringify(task.inputData)}`;
-  }
-
-  // Invoke each target agent
   for (const targetAgentId of task.targetAgentIds) {
-    const resolvedAgentId = resolveAgentId(targetAgentId);
-    const result = await invokeAgent(resolvedAgentId, inputText, correlationId);
-    results.push(result);
+    const harnessArn = resolveHarnessArn(targetAgentId);
+    const harnessResult = await invokeHarnessWithFallback(
+      harnessArn,
+      targetAgentId,
+      inputText,
+      correlationId,
+      task.priority,
+      task.taskType,
+    );
+
+    results.push({ agentName: targetAgentId, harnessResult });
 
     logInfo('Agent invocation result', {
       requestId,
-      agentId: resolvedAgentId,
-      success: result.success,
-      hasResponse: !!result.response,
+      agentName: targetAgentId,
+      success: harnessResult.success,
+      modelUsed: harnessResult.modelUsed,
+      attempts: harnessResult.attempts,
+      hasResponse: !!harnessResult.response,
     });
   }
 
   return results;
 }
 
+// ── Event Emission ─────────────────────────────────────────────────────────
+
 async function emitOrchestrationSummary(
   task: AgentOrchestratorEvent,
-  results: AgentTaskResult[],
+  results: OrchestrationResult[],
   requestId: string,
 ): Promise<void> {
-  const allSuccessful = results.every((r) => r.success);
+  const allSuccessful = results.every((r) => r.harnessResult.success);
   const summary = {
     correlationId: task.correlationId,
     taskType: task.taskType,
-    totalAgents: task.targetAgentIds.length,
-    successfulAgents: results.filter((r) => r.success).length,
-    failedAgents: results.filter((r) => !r.success).length,
-    allSuccessful,
     priority: task.priority,
+    totalAgents: task.targetAgentIds.length,
+    successfulAgents: results.filter((r) => r.harnessResult.success).length,
+    failedAgents: results.filter((r) => !r.harnessResult.success).length,
+    allSuccessful,
+    modelsUsed: results.map((r) => ({
+      agentName: r.agentName,
+      model: r.harnessResult.modelUsed,
+      attempts: r.harnessResult.attempts,
+      success: r.harnessResult.success,
+      routingMode: r.harnessResult.routingMode,
+    })),
     requestId,
     timestamp: new Date().toISOString(),
   };
 
   await withRetry(
     async () => {
-      await eventBridgeClient.send(new PutEventsCommand({
-        Entries: [
-          {
-            EventBusName: eventBusName,
-            Source: 'aws-au-ai-vgs-suite.agent-orchestrator',
-            DetailType: 'AgentOrchestrationComplete',
-            Detail: JSON.stringify(summary),
-          },
-        ],
-      }));
+      await eventBridgeClient.send(
+        new PutEventsCommand({
+          Entries: [
+            {
+              EventBusName: eventBusName,
+              Source: 'aws-au-ai-vgs-suite.agent-orchestrator',
+              DetailType: 'AgentOrchestrationComplete',
+              Detail: JSON.stringify(summary),
+            },
+          ],
+        }),
+      );
     },
     { maxAttempts: 3, baseDelayMs: 1000, maxDelayMs: 5000 },
     { requestId, correlationId: task.correlationId },
   );
 }
 
+// ── SQS Handler ────────────────────────────────────────────────────────────
+
 async function processRecord(record: SQSRecord, requestId: string): Promise<void> {
   const messageBody = JSON.parse(record.body);
   const task = messageBody as AgentOrchestratorEvent;
 
   if (!task.taskType || !task.targetAgentIds || task.targetAgentIds.length === 0) {
-    logWarn('Skipping invalid orchestration task', { requestId, recordBody: record.body.substring(0, 500) });
+    logWarn('Skipping invalid orchestration task', {
+      requestId,
+      recordBody: record.body.substring(0, 500),
+    });
     return;
   }
 
@@ -193,8 +342,9 @@ async function processRecord(record: SQSRecord, requestId: string): Promise<void
     requestId,
     correlationId: task.correlationId,
     taskType: task.taskType,
-    successful: results.filter((r) => r.success).length,
-    failed: results.filter((r) => !r.success).length,
+    priority: task.priority,
+    successful: results.filter((r) => r.harnessResult.success).length,
+    failed: results.filter((r) => !r.harnessResult.success).length,
   });
 }
 
@@ -208,7 +358,10 @@ export async function handler(event: SQSEvent, context: Context): Promise<SQSBat
     try {
       await processRecord(record, requestId);
     } catch (error) {
-      logError('Failed to process orchestration record', error, { requestId, messageId: record.messageId });
+      logError('Failed to process orchestration record', error, {
+        requestId,
+        messageId: record.messageId,
+      });
       batchItemFailures.push({ itemIdentifier: record.messageId });
     }
   }

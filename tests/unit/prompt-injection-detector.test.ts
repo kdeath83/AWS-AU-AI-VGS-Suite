@@ -3,7 +3,7 @@
  * Unit tests for the prompt injection detector Lambda.
  */
 
-import { handler } from '../../src/lambda/shield/prompt-injection-detector';
+import { handler } from '../../src/lambda/secure/prompt-injection-detector';
 import { APIGatewayProxyEvent, Context } from 'aws-lambda';
 
 const mockContext: Context = {

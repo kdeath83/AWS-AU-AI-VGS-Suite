@@ -80,8 +80,8 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       };
     }
 
-    const prompt = payload.prompt as string;
-    if (!prompt || typeof prompt !== 'string') {
+    const rawPrompt = payload.prompt as string;
+    if (!rawPrompt || typeof rawPrompt !== 'string') {
       logWarn('Missing or invalid prompt field', { requestId, payload });
       return {
         statusCode: 400,
@@ -90,16 +90,19 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       };
     }
 
+    // Enforce size cap: truncate at 10KB to prevent DoS (M7 fix)
+    const prompt = rawPrompt.substring(0, 10000);
+
     // Detection
     const detection = detectPromptInjection(prompt);
 
-    // Log attempt
+    // Log attempt — metadata only, no PII (C5 fix)
     const attempt: PromptInjectionAttempt = {
       requestId,
       timestamp: new Date().toISOString(),
       sourceIp: event.requestContext?.identity?.sourceIp || 'unknown',
       userAgent: event.requestContext?.identity?.userAgent || 'unknown',
-      promptSnippet: prompt.substring(0, 200),
+      promptSnippet: `[${prompt.length} chars, type: ${detection.attackType}]`,  // Redact PII — log metadata only
       attackType: detection.attackType,
       blocked: detection.blocked,
       actionTaken: detection.actionTaken,

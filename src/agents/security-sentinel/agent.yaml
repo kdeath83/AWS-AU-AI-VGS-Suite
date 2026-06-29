@@ -1,23 +1,37 @@
 name: security-sentinel
-version: 1.0.0
-description: Monitors AI endpoints and security findings for Australian FSI
-foundation_model: anthropic.claude-3-sonnet-20240229-v1:0
-idle_session_ttl: 1800
-tags:
-  project: aws-au-ai-vgs-suite
-  compliance: APRA-CPS-234
-  type: security
+version: 2.0.0
+description: >-
+  Monitors AI endpoints and security findings for Australian FSI.
+  Deployed as an AgentCore Harness with multi-model routing.
+harness_name: aws-au-ai-vgs-suite-security-sentinel-${ENVIRONMENT}
+type: harness
 
-# AgentCore Runtime Configuration
+# Model Routing (orchestrator selects based on priority)
+model_routing:
+  critical:
+    provider: bedrock
+    model_id: anthropic.claude-fable-5
+  standard:
+    provider: bedrock
+    model_id: anthropic.claude-opus-4-8
+  fallback:
+    provider: openAi
+    model_id: gpt-5.5
+  budget:
+    provider: liteLlm
+    model_id: deepseek-v4-pro
+    api_base: https://opencode.ai/zen/go/v1
+
+# Execution limits
 runtime:
   max_tokens: 4096
   temperature: 0.2
-  top_p: 0.9
+  max_iterations: 15
 
 # MCP Server integrations
 mcp_servers:
-  - server_id: guardduty-inspector
-    endpoint: arn:aws:bedrock-agentcore:::mcp-server/guardduty-inspector
+  - name: guardduty-inspector
+    url: https://guardduty-inspector.mcp.aws
     description: Reads GuardDuty findings and Inspector vulnerability scans
     required_permissions:
       - guardduty:GetFindings
@@ -45,3 +59,8 @@ observability:
   tracing_enabled: true
   logging_level: INFO
   metrics_namespace: VGS/SecuritySentinel
+
+tags:
+  project: aws-au-ai-vgs-suite
+  compliance: APRA-CPS-234
+  type: security

@@ -128,10 +128,10 @@ export class SharedStack extends cdk.Stack {
           'xray:PutTraceSegments',
           'xray:PutTelemetryRecords',
         ],
-        resources: ['*'],
-        conditions: {
-          StringEquals: { 'aws:RequestedRegion': props.apraregion },
-        },
+        resources: [
+          `arn:aws:logs:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:log-group:/aws/lambda/${PROJECT_NAME}-*:*`,
+          `arn:aws:logs:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:log-group:/${PROJECT_NAME}/*:*`,
+        ],
       }),
     );
 
@@ -157,7 +157,8 @@ export class SharedStack extends cdk.Stack {
         bucketName: `${PROJECT_NAME}-cloudtrail-${props.environment}-${this.account}`,
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
         objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
-        encryption: s3.BucketEncryption.S3_MANAGED,
+        encryption: s3.BucketEncryption.KMS,
+        encryptionKey: this.kmsKey,
         lifecycleRules: [
           {
             transitions: [

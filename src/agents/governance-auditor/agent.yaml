@@ -1,31 +1,45 @@
 name: governance-auditor
-version: 1.0.0
-description: Validates compliance controls and reads Audit Manager/Config for Australian FSI
-foundation_model: anthropic.claude-3-sonnet-20240229-v1:0
-idle_session_ttl: 1800
-tags:
-  project: aws-au-ai-vgs-suite
-  compliance: APRA-CPS-234
-  type: governance
+version: 2.0.0
+description: >-
+  Validates compliance controls and reads Audit Manager/Config for Australian FSI.
+  Deployed as an AgentCore Harness with multi-model routing.
+harness_name: aws-au-ai-vgs-suite-governance-auditor-${ENVIRONMENT}
+type: harness
 
-# AgentCore Runtime Configuration
+# Model Routing (orchestrator selects based on priority)
+model_routing:
+  critical:
+    provider: bedrock
+    model_id: anthropic.claude-opus-4-8
+  standard:
+    provider: openAi
+    model_id: gpt-5.5
+  fallback:
+    provider: bedrock
+    model_id: claude-sonnet-4-6
+  budget:
+    provider: liteLlm
+    model_id: deepseek-v4-flash
+    api_base: https://opencode.ai/zen/go/v1
+
+# Execution limits
 runtime:
   max_tokens: 4096
   temperature: 0.1
-  top_p: 0.9
+  max_iterations: 15
 
 # MCP Server integrations
 mcp_servers:
-  - server_id: audit-manager
-    endpoint: arn:aws:bedrock-agentcore:::mcp-server/audit-manager
+  - name: audit-manager
+    url: https://audit-manager.mcp.aws
     description: Reads Audit Manager assessments and evidence
     required_permissions:
       - auditmanager:GetAssessment
       - auditmanager:GetEvidence
       - auditmanager:GetEvidenceByEvidenceFolder
       - auditmanager:ListEvidence
-  - server_id: config-compliance
-    endpoint: arn:aws:bedrock-agentcore:::mcp-server/config-compliance
+  - name: config-compliance
+    url: https://config-compliance.mcp.aws
     description: Reads AWS Config rule evaluations and compliance history
     required_permissions:
       - config:GetComplianceDetailsByConfigRule
@@ -48,3 +62,8 @@ observability:
   tracing_enabled: true
   logging_level: INFO
   metrics_namespace: VGS/GovernanceAuditor
+
+tags:
+  project: aws-au-ai-vgs-suite
+  compliance: APRA-CPS-234
+  type: governance

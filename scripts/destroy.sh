@@ -52,7 +52,7 @@ echo ""
 echo "⚠️  WARNING: This will destroy all CDK-managed resources!"
 echo "Environment:  $ENVIRONMENT"
 echo "Region:       $APRAREGION"
-echo "Evidence:     $([ "$RETAIN_EVIDENCE" == "true" ] && echo 'RETAINED' || echo 'DELETED')"
+echo "Evidence:     $([ "$RETAIN_EVIDENCE" = "true" ] && echo 'RETAINED' || echo 'DELETED')"
 echo ""
 
 read -p "Are you sure? Type 'destroy' to confirm: " CONFIRM
@@ -81,6 +81,6 @@ npx cdk destroy --all \
 
 echo ""
 echo "✅ Destruction complete."
-if [ "$RETAIN_EVIDENCE" == "true" ]; then
+if [ "$RETAIN_EVIDENCE" = "true" ]; then
     echo "📦 Evidence S3 buckets were retained. Delete manually if needed."
 fi

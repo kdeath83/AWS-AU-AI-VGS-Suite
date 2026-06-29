@@ -59,9 +59,10 @@ export const DEFAULT_RETRY_OPTIONS: RetryOptions = {
 };
 
 export async function withRetry<T>(
-  operation: () => Promise<T>,
-  options: Partial<RetryOptions> = {},
-  context: LogContext = {},
+  fn: () => Promise<T>,
+  options: RetryOptions = {},
+  logContext: Record<string, unknown> = {},
+  getRemainingTimeMs?: () => number,
 ): Promise<T> {
   const opts = { ...DEFAULT_RETRY_OPTIONS, ...options };
   let lastError: unknown;
@@ -162,7 +163,7 @@ export class CircuitBreaker {
         logInfo(`Circuit breaker ${this.name} CLOSED`, context);
       }
     } else {
-      this.failureCount = Math.max(0, this.failureCount - 1);
+      this.failureCount = 0; // Reset on success in CLOSED state
     }
   }
 

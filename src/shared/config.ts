@@ -57,4 +57,9 @@ export const ENV_VARS = {
   ESCALATION_TOPIC_ARN: 'ESCALATION_TOPIC_ARN',
   SQS_QUEUE_URL: 'SQS_QUEUE_URL',
   DLQ_URL: 'DLQ_URL',
+  // AgentCore Harness ARNs (created via scripts/create-harnesses.sh)
+  SECURITY_HARNESS_ARN: 'SECURITY_HARNESS_ARN',
+  GOVERNANCE_HARNESS_ARN: 'GOVERNANCE_HARNESS_ARN',
+  // AgentCore Identity credential ARN for 3rd-party API keys
+  IDENTITY_API_KEY_ARN: 'IDENTITY_API_KEY_ARN',
 } as const;

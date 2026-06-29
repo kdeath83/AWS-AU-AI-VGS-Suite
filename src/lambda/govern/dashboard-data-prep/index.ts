@@ -103,7 +103,7 @@ async function fetchCloudWatchMetrics(requestId: string): Promise<DashboardMetri
             Metric: {
               Namespace: namespace,
               MetricName: 'Errors',
-              Dimensions: [{ Name: 'FunctionName', Value: 'aws-au-ai-vgs-suite-*' }],
+              // Dimension removed — wildcards not supported. Aggregate across all functions.
             },
             Period: 300,
             Stat: 'Sum',
@@ -115,7 +115,7 @@ async function fetchCloudWatchMetrics(requestId: string): Promise<DashboardMetri
             Metric: {
               Namespace: namespace,
               MetricName: 'Invocations',
-              Dimensions: [{ Name: 'FunctionName', Value: 'aws-au-ai-vgs-suite-*' }],
+              // Dimension removed — wildcards not supported. Aggregate across all functions.
             },
             Period: 300,
             Stat: 'Sum',

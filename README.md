@@ -72,6 +72,9 @@ npm install
 npx cdk bootstrap
 npx cdk deploy --all
 
+# Create AgentCore Harnesses with model load balancing
+./scripts/create-harnesses.sh --environment dev --region ap-southeast-2
+
 # Or use the deploy script with options
 ./scripts/deploy.sh --environment prod --region ap-southeast-2
 ```
@@ -292,16 +295,54 @@ Validates:
 ### Security Sentinel
 
 - **Purpose**: Monitors AI endpoints, reads GuardDuty/Inspector findings
-- **Model**: Claude 3 Sonnet
+- **Deployment**: AgentCore Harness (config-based, not code)
+- **Critical Model**: Claude Fable 5
+- **Standard Model**: Claude Opus 4.8
+- **Fallback Model**: GPT-5.5
+- **Budget Model**: DeepSeek V4 Pro (via OpenCode Go)
 - **Tools**: GuardDuty findings, Inspector vulnerability scans, security posture summary
 - **Guardrails**: Financial advice block, data exfiltration block, PII redaction
 
 ### Governance Auditor
 
 - **Purpose**: Validates compliance controls, reads Audit Manager/Config
-- **Model**: Claude 3 Sonnet
+- **Deployment**: AgentCore Harness (config-based, not code)
+- **Critical Model**: Claude Opus 4.8
+- **Standard Model**: GPT-5.5 (cost-optimized)
+- **Fallback Model**: Claude Sonnet 4.6
+- **Budget Model**: DeepSeek V4 Flash
 - **Tools**: Audit Manager assessments, Config rule evaluations, compliance scoring
 - **Guardrails**: Regulatory evasion block, PII anonymization
+
+### Model Load Balancing
+
+Two routing modes — **weighted distribution** for high-priority tiers and **failover chains** for budget tiers:
+
+**Weighted routing** (CRITICAL & HIGH) — each invocation independently rolls a weighted die:
+
+| Tier | Split | How it works |
+|------|-------|--------------|
+| **CRITICAL** | 80% Opus 4.8 / 20% GPT-5.5 | Both providers actively serve traffic. Non-selected model becomes fallback. |
+| **HIGH (security)** | 70% Opus 4.8 / 30% GPT-5.5 | Opus leads on security scans and incident response. |
+| **HIGH (compliance)** | 60% GPT-5.5 / 40% Opus 4.8 | GPT-5.5 leads on compliance checks and audit evidence. |
+
+**Failover routing** (MEDIUM & LOW) — deterministic primary with ordered fallback chain:
+
+| Priority | Security Tasks | Compliance Tasks |
+|----------|---------------|-----------------|
+| **MEDIUM** | Sonnet 4.6 → DeepSeek Pro → GPT-5.5 | DeepSeek Pro → Sonnet 4.6 → DeepSeek Flash |
+| **LOW** | DeepSeek Flash → DeepSeek Pro → Sonnet 4.6 | DeepSeek Flash → DeepSeek Pro → Sonnet 4.6 |
+
+**Model lineup (June 2026):**
+- Claude Fable 5 — Anthropic's top tier, frontier reasoning & agentic tasks
+- Claude Opus 4.8 — Highest GA Opus, complex reasoning & long-horizon agents
+- Claude Sonnet 4.6 — Production default, near-Opus at lower cost
+- GPT-5.5 — OpenAI's most advanced frontier model on Bedrock
+- DeepSeek V4 Pro/Flash — Cost-optimized via OpenCode Go
+
+Adjust weights in `src/shared/model-router.ts` — no infrastructure deploy needed.
+
+For guidance on using multiple models for consistent outcomes in critical banking operations (customer deposits, etc.), see **[docs/multi-model-consistency-banking.md](docs/multi-model-consistency-banking.md)**.
 
 ---
 

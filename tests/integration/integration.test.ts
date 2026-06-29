@@ -111,7 +111,7 @@ async function testGuardDutyEnabled(): Promise<TestResult> {
     );
     return {
       test: 'GuardDuty enabled',
-      passed: detectorId !== 'None' && detectorId.startsWith(''),
+      passed: detectorId !== 'None' && detectorId.length > 0,
       message: `Detector: ${detectorId}`,
       duration: Date.now() - start,
     };

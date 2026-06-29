@@ -13,9 +13,9 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as neptune from 'aws-cdk-lib/aws-neptune';
 import * as sagemaker from 'aws-cdk-lib/aws-sagemaker';
-import * as bedrock from 'aws-cdk-lib/aws-bedrock';
 import { Construct } from 'constructs';
 import { PROJECT_NAME } from './constants';
 
@@ -75,6 +75,8 @@ export class ValidateStack extends cdk.Stack {
       iamAuthEnabled: true,
       storageEncrypted: true,
       kmsKeyId: props.kmsKey.keyArn,
+      backupRetentionPeriod: 35,
+      preferredBackupWindow: '03:00-04:00',
       vpcSecurityGroupIds: [
         new ec2.SecurityGroup(this, 'NeptuneSecurityGroup', {
           vpc: props.vpc,
@@ -113,10 +115,10 @@ export class ValidateStack extends cdk.Stack {
         'kms:Decrypt',
         'kms:GenerateDataKey',
       ],
-      resources: ['*'],
-      conditions: {
-        StringEquals: { 'aws:RequestedRegion': cdk.Stack.of(this).region },
-      },
+      resources: [
+        props.evidenceBucket.bucketArn,
+        `${props.evidenceBucket.bucketArn}/*`,
+      ],
     }));
     props.evidenceBucket.grantReadWrite(sagemakerRole);
 
@@ -162,7 +164,10 @@ export class ValidateStack extends cdk.Stack {
         'kms:Decrypt',
         'kms:GenerateDataKey',
       ],
-      resources: ['*'],
+      resources: [
+        props.evidenceBucket.bucketArn,
+        `${props.evidenceBucket.bucketArn}/*`,
+      ],
     }));
     props.evidenceBucket.grantReadWrite(clarifyProcessingRole);
 
@@ -215,80 +220,58 @@ export class ValidateStack extends cdk.Stack {
       },
     });
 
-    // ── Bedrock AgentCore Runtime ────────────────────────────────────────────
-    // Security Sentinel Agent
-    const securitySentinelAgent = new bedrock.CfnAgent(this, 'SecuritySentinelAgent', {
-      agentName: `${PROJECT_NAME}-security-sentinel-${props.environment}`,
-      description: 'Monitors AI endpoints, reads GuardDuty and Inspector findings',
-      foundationModel: 'anthropic.claude-3-sonnet-20240229-v1:0',
-      idleSessionTtlInSeconds: 1800,
-      instruction: `You are the Security Sentinel, an AI security monitoring agent for an Australian Financial Services Institution.
-Your responsibilities:
-1. Monitor AI endpoints for anomalous behavior, prompt injection attempts, and data exfiltration
-2. Read and analyze GuardDuty findings related to AI workloads
-3. Read and analyze Inspector vulnerability scan results
-4. Generate security incident reports with severity classification
-5. Escalate critical findings via EventBridge
+    // ── AgentCore Harness Configuration ──────────────────────────────────────
+    // Harnesses are created via scripts/create-harnesses.sh (config-based, not infra).
+    // The CDK passes harness ARNs as environment variables to the orchestrator.
+    // 
+    // Model routing happens at invocation time — the orchestrator selects a model
+    // based on task priority and type, and passes it to InvokeHarness.
+    //
+    // Supported models (see src/shared/model-router.ts):
+    //   CRITICAL → Claude Opus 4.5 (highest accuracy)
+    //   HIGH security → Claude Sonnet 4.5
+    //   HIGH compliance → DeepSeek V4 Pro (via OpenCode Go / LiteLLM)
+    //   MEDIUM/LOW → DeepSeek V4 Flash (cost-optimized)
+    //   All tiers support automatic fallback if primary model fails.
 
-Always comply with APRA CPS 234 security requirements.`,
-      guardrailConfiguration: {
-        guardrailIdentifier: 'placeholder-guardrail-id',
-        guardrailVersion: 'DRAFT',
-      },
+    const securityHarnessArn = `arn:aws:bedrock-agentcore:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:harness/${PROJECT_NAME}-security-sentinel-${props.environment}`;
+    const governanceHarnessArn = `arn:aws:bedrock-agentcore:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:harness/${PROJECT_NAME}-governance-auditor-${props.environment}`;
+
+    // ── AgentCore Identity ───────────────────────────────────────────────────
+    // Role for harness execution — grants access to Bedrock models and AgentCore services.
+    const harnessExecutionRole = new iam.Role(this, 'HarnessExecutionRole', {
+      assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com'),
+      description: 'Execution role for AgentCore Harness — model invocation and credential access',
     });
-
-    // Governance Auditor Agent
-    const governanceAuditorAgent = new bedrock.CfnAgent(this, 'GovernanceAuditorAgent', {
-      agentName: `${PROJECT_NAME}-governance-auditor-${props.environment}`,
-      description: 'Validates compliance controls, reads Audit Manager and Config',
-      foundationModel: 'anthropic.claude-3-sonnet-20240229-v1:0',
-      idleSessionTtlInSeconds: 1800,
-      instruction: `You are the Governance Auditor, a compliance validation agent for an Australian Financial Services Institution.
-Your responsibilities:
-1. Validate compliance controls against APRA CPS 234 and CPS 230 frameworks
-2. Read Audit Manager assessment results and evidence
-3. Read AWS Config compliance rules and evaluations
-4. Identify compliance gaps and recommend remediation
-5. Generate board-ready compliance summaries
-
-Always provide evidence-based conclusions.`,
-      guardrailConfiguration: {
-        guardrailIdentifier: 'placeholder-guardrail-id',
-        guardrailVersion: 'DRAFT',
-      },
-    });
-
-    // ── Bedrock AgentCore Identity ───────────────────────────────────────────
-    // JWT-based agent authentication
-    const agentIdentityRole = new iam.Role(this, 'AgentCoreIdentityRole', {
-      assumedBy: new iam.ServicePrincipal('bedrock.amazonaws.com'),
-      description: 'Identity role for Bedrock AgentCore JWT-based authentication',
-    });
-    agentIdentityRole.addToPolicy(new iam.PolicyStatement({
+    harnessExecutionRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
-      actions: ['bedrock:InvokeAgent', 'bedrock:InvokeModel'],
+      actions: [
+        'bedrock:InvokeModel',
+        'bedrock:InvokeModelWithResponseStream',
+        'bedrock-agentcore:InvokeHarness',
+      ],
       resources: [
-        securitySentinelAgent.attrAgentArn,
-        governanceAuditorAgent.attrAgentArn,
+        `arn:aws:bedrock:${cdk.Stack.of(this).region}::foundation-model/anthropic.claude-fable-5`,
+        `arn:aws:bedrock:${cdk.Stack.of(this).region}::foundation-model/anthropic.claude-opus-4-8`,
+        `arn:aws:bedrock:${cdk.Stack.of(this).region}::foundation-model/claude-sonnet-4-6`,
+      ],
+    }));
+    harnessExecutionRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'bedrock-agentcore-identity:GetApiKeyCredential',
+        'bedrock-agentcore-identity:DecryptApiKey',
+      ],
+      resources: [
+        `arn:aws:bedrock-agentcore:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:api-key-credential/*`,
       ],
     }));
 
-    // ── Bedrock AgentCore Gateway ────────────────────────────────────────────
-    // MCP server registration
-    const agentCoreGateway = new bedrock.CfnAgent(this, 'AgentCoreGateway', {
-      agentName: `${PROJECT_NAME}-agentcore-gateway-${props.environment}`,
-      description: 'Gateway for MCP server registration and tool discovery',
-      foundationModel: 'anthropic.claude-3-sonnet-20240229-v1:0',
-      idleSessionTtlInSeconds: 1800,
-      instruction: `You are the AgentCore Gateway, responsible for MCP server registration and tool discovery.
-Your responsibilities:
-1. Register new MCP servers with the Agent Registry
-2. Route agent requests to the appropriate MCP server
-3. Maintain a catalog of available tools and their capabilities
-4. Validate tool access permissions before routing
-
-Always log all registrations and routing decisions.`,
-    });
+    // ── AgentCore Gateway (MCP Registration) ──────────────────────────────────
+    // Model-agnostic gateway for MCP server registration and tool discovery.
+    // Uses AgentCore Gateway — separate from the harness, handles all tool routing.
+    // Created via CLI or console (configuration, not infrastructure).
+    // Reference: https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway.html
 
     // ── AWS Agent Registry ──────────────────────────────────────────────────
     // Registry resource + records + EventBridge notifications
@@ -329,7 +312,7 @@ Your responsibilities:
     // ── Lambda: Model Drift Handler ──────────────────────────────────────────
     const driftHandlerQueue = new sqs.Queue(this, 'DriftHandlerQueue', {
       queueName: `${PROJECT_NAME}-drift-handler-${props.environment}`,
-      visibilityTimeout: cdk.Duration.seconds(300),
+      visibilityTimeout: cdk.Duration.seconds(900),
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
@@ -416,7 +399,7 @@ Your responsibilities:
     // ── Lambda: Audit Evidence Collector ────────────────────────────────────
     const auditEvidenceQueue = new sqs.Queue(this, 'AuditEvidenceQueue', {
       queueName: `${PROJECT_NAME}-audit-evidence-${props.environment}`,
-      visibilityTimeout: cdk.Duration.seconds(300),
+      visibilityTimeout: cdk.Duration.seconds(900),
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
@@ -499,7 +482,7 @@ Your responsibilities:
     // ── Lambda: Agent Orchestrator ───────────────────────────────────────────
     const orchestratorQueue = new sqs.Queue(this, 'OrchestratorQueue', {
       queueName: `${PROJECT_NAME}-agent-orchestrator-${props.environment}`,
-      visibilityTimeout: cdk.Duration.seconds(300),
+      visibilityTimeout: cdk.Duration.seconds(900),
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
@@ -523,8 +506,8 @@ Your responsibilities:
       memorySize: 512,
       environment: {
         EVENT_BUS_NAME: props.eventBus.eventBusName,
-        SECURITY_SENTINEL_AGENT_ID: securitySentinelAgent.attrAgentId,
-        GOVERNANCE_AUDITOR_AGENT_ID: governanceAuditorAgent.attrAgentId,
+        SECURITY_HARNESS_ARN: securityHarnessArn,
+        GOVERNANCE_HARNESS_ARN: governanceHarnessArn,
         LOG_LEVEL: 'INFO',
       },
       vpc: props.vpc,
@@ -538,12 +521,61 @@ Your responsibilities:
       batchSize: 1,
     }));
 
+    // ── DLQ Monitoring Alarms ─────────────────────────────────────────────
+    // Alert when messages land in any dead-letter queue (CPS 234-5 compliance).
+    const dlqAlarmTopic = `arn:aws:sns:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:${PROJECT_NAME}-alarms`;
+
+    // Orchestrator DLQ alarm
+    new cloudwatch.Alarm(this, 'OrchestratorDLQAlarm', {
+      alarmName: `${PROJECT_NAME}-orchestrator-dlq-alarm`,
+      alarmDescription: 'Messages in orchestrator DLQ — agent tasks are failing',
+      metric: (orchestratorQueue.deadLetterQueue!.queue as sqs.Queue).metricApproximateNumberOfMessagesVisible(),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+
+    // Audit evidence DLQ alarm
+    new cloudwatch.Alarm(this, 'AuditEvidenceDLQAlarm', {
+      alarmName: `${PROJECT_NAME}-audit-evidence-dlq-alarm`,
+      alarmDescription: 'Messages in audit evidence DLQ — evidence collection is failing',
+      metric: (auditEvidenceQueue.deadLetterQueue!.queue as sqs.Queue).metricApproximateNumberOfMessagesVisible(),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+
+    // Drift handler DLQ alarm
+    new cloudwatch.Alarm(this, 'DriftHandlerDLQAlarm', {
+      alarmName: `${PROJECT_NAME}-drift-handler-dlq-alarm`,
+      alarmDescription: 'Messages in drift handler DLQ — model drift detection is failing',
+      metric: (driftHandlerQueue.deadLetterQueue!.queue as sqs.Queue).metricApproximateNumberOfMessagesVisible(),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+
+    // Bias report DLQ alarm
+    new cloudwatch.Alarm(this, 'BiasReportDLQAlarm', {
+      alarmName: `${PROJECT_NAME}-bias-report-dlq-alarm`,
+      alarmDescription: 'Messages in bias report DLQ — bias detection is failing',
+      metric: (biasReportQueue.deadLetterQueue!.queue as sqs.Queue).metricApproximateNumberOfMessagesVisible(),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+
     // ── Outputs ──────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'NeptuneEndpoint', { value: this.neptuneCluster.attrEndpoint });
     new cdk.CfnOutput(this, 'AgentRegistryTableArn', { value: this.agentRegistryTable.tableArn });
     new cdk.CfnOutput(this, 'ModelMonitorEndpointConfig', { value: this.modelMonitorEndpointConfigName });
     new cdk.CfnOutput(this, 'AuditAssessmentArn', { value: this.auditAssessmentArn });
-    new cdk.CfnOutput(this, 'SecuritySentinelAgentId', { value: securitySentinelAgent.attrAgentId });
-    new cdk.CfnOutput(this, 'GovernanceAuditorAgentId', { value: governanceAuditorAgent.attrAgentId });
+    new cdk.CfnOutput(this, 'SecurityHarnessArn', { value: securityHarnessArn });
+    new cdk.CfnOutput(this, 'GovernanceHarnessArn', { value: governanceHarnessArn });
+    new cdk.CfnOutput(this, 'HarnessExecutionRoleArn', { value: harnessExecutionRole.roleArn });
   }
 }

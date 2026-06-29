@@ -126,6 +126,33 @@ export interface AgentDefinition {
   guardrailId?: string;
 }
 
+// ── Harness Model Routing ────────────────────────────────────────────────────
+
+/** Provider type for harness model configuration */
+export type ModelProvider = 'bedrock' | 'liteLlm' | 'openAi' | 'gemini';
+
+/** Model configuration for a single harness invocation */
+export interface HarnessModelConfig {
+  provider: ModelProvider;
+  modelId: string;
+  apiBase?: string;
+  apiKeyArn?: string;
+  additionalParams?: Record<string, unknown>;
+  apiFormat?: 'responses' | 'chat_completions' | 'converse_stream';
+}
+
+/** Result summary from harness invocation including model routing details */
+export interface HarnessInvocationSummary {
+  agentName: string;
+  model: string;
+  provider: ModelProvider;
+  attempts: number;
+  success: boolean;
+  latencyMs?: number;
+  /** Routing mode used: 'weighted' (probabilistic split) or 'failover' (deterministic) */
+  routingMode?: 'weighted' | 'failover';
+}
+
 // ── Security / Shield ────────────────────────────────────────────────────────
 
 export interface GuardDutyFinding {

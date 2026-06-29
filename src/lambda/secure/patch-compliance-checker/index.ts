@@ -124,8 +124,9 @@ export async function handler(_event: EventBridgeEvent<string, unknown>, context
     }));
 
     // For POC: check a placeholder instance ID
-    // In production, iterate over all managed instances
-    const instanceIds = ['i-placeholder-001'];
+    // FIXME(M1): Replace placeholder with DescribeInstanceInformation.
+    // Use tag-based filtering: { Key: 'Project', Values: [PROJECT_NAME] }
+    // const instanceIds = ['i-placeholder-001'];
 
     for (const instanceId of instanceIds) {
       try {

@@ -65,7 +65,7 @@ async function submitClarifyJob(event: BiasReportGeneratorEvent, requestId: stri
       MaxRuntimeInSeconds: 3600,
     },
     AppSpecification: {
-      ImageUri: '382416733822.dkr.ecr.us-east-1.amazonaws.com/clarify-processing:1.0',
+      ImageUri: `382416733822.dkr.ecr.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/clarify-processing:1.0`,
       ContainerArguments: [
         '--analysis-type', event.analysisType,
         '--target-label', event.targetLabel,
@@ -93,7 +93,7 @@ async function storeBiasReportPlaceholder(event: BiasReportGeneratorEvent, jobNa
     modelName: event.modelName,
     analysisType: event.analysisType,
     biasMetrics: {
-      ' demographic_parity': 0.0,
+      'demographic_parity',
       'equal_opportunity': 0.0,
       'disparate_impact': 0.0,
     },
