@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VGS Suite — Multi-Model Router Demo</title>
+<title>AWS VGS Suite — Multi Model Router</title>
 <style>
   :root {
     --bg: #0a0e14;
@@ -103,6 +103,23 @@
   .stats-row { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--muted); margin-top: 0.5rem; }
   .stats-row strong { color: var(--text); }
 
+  /* ── Add/Remove controls ── */
+  .delete-btn, .add-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer;
+    font-size: 0.65rem; transition: all 0.15s;
+  }
+  .delete-btn:hover { background: rgba(248,113,113,0.15); border-color: var(--red); color: var(--red); }
+  .add-btn:hover { background: rgba(52,211,153,0.15); border-color: var(--green); color: var(--green); }
+  .add-model-row { background: rgba(52,211,153,0.03); }
+  .add-model-row td { padding: 0.4rem 0.5rem; }
+  .add-model-row select, .add-model-row input {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 0.2rem 0.3rem; border-radius: 3px; font-size: 0.7rem;
+  }
+  .add-model-row select { width: 130px; }
+  .add-model-row input { width: 3rem; text-align: center; }
+
   @media (max-width: 900px) {
     main { grid-template-columns: 1fr; }
   }
@@ -112,14 +129,14 @@
 
 <header>
   <h1><span>VGS</span> Suite — Multi-Model Router</h1>
-  <span class="badge">June 2026 · APRA CPS 234</span>
+  <span class="badge">June 2026</span>
 </header>
 
 <main>
   <!-- ═══ LEFT: Config ═══ -->
   <div>
     <div class="card">
-      <h2>Prioritetier</h2>
+      <h2>PRIORITY</h2>
       <div class="tiers" id="tierSelector">
         <button class="tier-btn active" data-tier="CRITICAL">🔴 CRITICAL</button>
         <button class="tier-btn" data-tier="HIGH_SECURITY">🟡 HIGH (Security)</button>
@@ -131,7 +148,7 @@
     <div class="card">
       <h2>Model Pool &amp; Weights</h2>
       <table id="poolTable">
-        <thead><tr><th>Model</th><th>Provider</th><th>Weight</th><th>Share</th></tr></thead>
+        <thead><tr><th>Model</th><th>Provider</th><th>Weight</th><th>Share</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
       <div class="stats-row" style="margin-top:0.75rem;">
@@ -175,8 +192,9 @@ const TIERS = {
     name: 'CRITICAL',
     mode: 'weighted',
     models: [
-      { id: 'claude-opus-4.8',   provider: 'Anthropic (Bedrock)',  weight: 80, color: '#38bdf8' },
-      { id: 'gpt-5.5',           provider: 'OpenAI (Bedrock)',      weight: 20, color: '#a78bfa' },
+      { id: 'claude-opus-4.8',   provider: 'Anthropic (Bedrock)',  weight: 50, color: '#38bdf8' },
+      { id: 'gpt-5.5',           provider: 'OpenAI (Bedrock)',      weight: 30, color: '#a78bfa' },
+      { id: 'claude-fable-5',    provider: 'Anthropic (Bedrock)',  weight: 20, color: '#fbbf24' },
     ],
   },
   HIGH_SECURITY: {
@@ -205,6 +223,16 @@ const TIERS = {
     ],
   },
 };
+
+// Available models that can be added to any tier
+const AVAILABLE_MODELS = [
+  { id: 'claude-fable-5',     provider: 'Anthropic (Bedrock)',  color: '#fbbf24' },
+  { id: 'claude-opus-4.8',    provider: 'Anthropic (Bedrock)',  color: '#38bdf8' },
+  { id: 'claude-sonnet-4.6',  provider: 'Anthropic (Bedrock)',  color: '#64748b' },
+  { id: 'gpt-5.5',            provider: 'OpenAI (Bedrock)',     color: '#a78bfa' },
+  { id: 'deepseek-v4-pro',    provider: 'DeepSeek (OpenCode)',  color: '#34d399' },
+  { id: 'deepseek-v4-flash',  provider: 'DeepSeek (OpenCode)',  color: '#22c55e' },
+];
 
 let currentTier = 'CRITICAL';
 let counters = {};
@@ -266,8 +294,21 @@ function render() {
         </div>
       </td>
       <td class="weight-pct">${share}${tier.mode === 'weighted' ? '%' : ''}</td>
+      <td><button class="delete-btn" onclick="removeModel('${m.id}')" title="Remove model">✕</button></td>
     </tr>`;
-  }).join('');
+  }).join('') + addRowHTML;
+
+  // ── Add Model row ──
+  const existingIds = tier.models.map(m => m.id);
+  const availableToAdd = AVAILABLE_MODELS.filter(m => !existingIds.includes(m.id));
+  const addRowHTML = availableToAdd.length > 0 ? `<tr class="add-model-row">
+    <td colspan="5" style="padding:0.4rem 0.5rem;">
+      <select id="addModelSelect">${availableToAdd.map(m => `<option value="${m.id}">${m.id}</option>`).join('')}</select>
+      <span style="color:var(--muted);margin:0 0.3rem;">weight</span>
+      <input id="addModelWeight" type="number" min="1" max="100" value="10">
+      <button class="add-btn" onclick="addModel()" style="margin-left:0.5rem;">+ Add Model</button>
+    </td>
+  </tr>` : '';
 
   document.getElementById('totalWeight').textContent = totalWeight;
   document.getElementById('providerCount').textContent = new Set(tier.models.map(m => m.provider)).size;
@@ -314,6 +355,41 @@ function updateWeight(modelId, val) {
   const tier = TIERS[currentTier];
   const model = tier.models.find(m => m.id === modelId);
   if (model) model.weight = w;
+  resetCounters();
+  render();
+}
+
+function removeModel(modelId) {
+  const tier = TIERS[currentTier];
+  tier.models = tier.models.filter(m => m.id !== modelId);
+  if (tier.models.length === 0) {
+    tier.models.push({ id: 'claude-sonnet-4.6', provider: 'Anthropic (Bedrock)', weight: 100, color: '#64748b' });
+    tier.mode = 'weighted';
+  }
+  resetCounters();
+  render();
+}
+
+function addModel() {
+  const sel = document.getElementById('addModelSelect');
+  const weightInput = document.getElementById('addModelWeight');
+  const modelId = sel.value;
+  const weight = Math.max(1, Math.min(100, parseInt(weightInput.value) || 10));
+
+  const tier = TIERS[currentTier];
+  // Don't add duplicates
+  if (tier.models.some(m => m.id === modelId)) {
+    alert(`Model "${modelId}" is already in the pool.`);
+    return;
+  }
+
+  const template = AVAILABLE_MODELS.find(m => m.id === modelId);
+  tier.models.push({
+    id: template.id,
+    provider: template.provider,
+    weight: weight,
+    color: template.color,
+  });
   resetCounters();
   render();
 }
