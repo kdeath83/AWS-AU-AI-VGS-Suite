@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGS Suite — Multi-Model Router Demo</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #131820;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --accent: #38bdf8;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --purple: #a78bfa;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 0;
+  }
+
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; }
+  header h1 span { color: var(--accent); }
+  .badge { font-size: 0.7rem; background: var(--border); color: var(--muted); padding: 0.25rem 0.6rem; border-radius: 4px; }
+
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .card h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 1rem; }
+
+  /* ── Tier Selector ── */
+  .tiers { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .tier-btn {
+    flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px;
+    background: transparent; color: var(--muted); cursor: pointer;
+    font-size: 0.75rem; font-weight: 600; transition: all 0.15s;
+  }
+  .tier-btn.active { background: rgba(56,189,248,0.1); border-color: var(--accent); color: var(--accent); }
+  .tier-btn:hover:not(.active) { border-color: var(--muted); }
+
+  /* ── Pool Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 0.5rem; border-bottom: 1px solid rgba(30,41,59,0.5); }
+  .model-name { font-weight: 600; }
+  .provider-badge { font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 3px; display: inline-block; }
+  .provider-bedrock { background: rgba(56,189,248,0.15); color: var(--accent); }
+  .provider-openai { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .provider-litellm { background: rgba(52,211,153,0.15); color: var(--green); }
+
+  .weight-bar-wrap { display: flex; align-items: center; gap: 0.5rem; }
+  .weight-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .weight-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .weight-pct { font-variant-numeric: tabular-nums; min-width: 3rem; text-align: right; font-size: 0.75rem; color: var(--muted); }
+  .weight-input { width: 3rem; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.15rem 0.3rem; border-radius: 3px; font-size: 0.75rem; text-align: center; }
+
+  /* ── Sim Panel ── */
+  .sim-controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .sim-btn {
+    padding: 0.5rem 1rem; border-radius: 6px; border: none;
+    font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .sim-btn.run { background: var(--accent); color: #0a0e14; }
+  .sim-btn.run:hover { filter: brightness(1.1); }
+  .sim-btn.reset { background: var(--border); color: var(--text); }
+  .sim-btn.reset:hover { background: #334155; }
+  .sim-btn.stress { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+
+  /* ── Results ── */
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+  .result-item {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem;
+    text-align: center;
+  }
+  .result-item .count { font-size: 1.8rem; font-weight: 700; line-height: 1; margin-bottom: 0.2rem; }
+  .result-item .label { font-size: 0.7rem; color: var(--muted); }
+  .result-item .pct { font-size: 0.7rem; margin-top: 0.15rem; }
+  .result-item .pct.over { color: var(--amber); }
+  .result-item .pct.under { color: var(--muted); }
+
+  /* ── Log ── */
+  .log { max-height: 320px; overflow-y: auto; font-size: 0.72rem; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .log-entry { padding: 0.3rem 0.5rem; border-bottom: 1px solid rgba(30,41,59,0.3); display: flex; gap: 0.75rem; }
+  .log-entry .idx { color: var(--muted); min-width: 2.5rem; }
+  .log-entry .selected { font-weight: 600; }
+  .log-entry .bar { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 0.3rem; }
+
+  .drift-warning { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.7rem; color: var(--red); margin-top: 0.5rem; display: none; }
+  .drift-warning.show { display: block; }
+
+  /* ── Footer stats ── */
+  .stats-row { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--muted); margin-top: 0.5rem; }
+  .stats-row strong { color: var(--text); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>VGS</span> Suite — Multi-Model Router</h1>
+  <span class="badge">June 2026 · APRA CPS 234</span>
+</header>
+
+<main>
+  <!-- ═══ LEFT: Config ═══ -->
+  <div>
+    <div class="card">
+      <h2>Prioritetier</h2>
+      <div class="tiers" id="tierSelector">
+        <button class="tier-btn active" data-tier="CRITICAL">🔴 CRITICAL</button>
+        <button class="tier-btn" data-tier="HIGH_SECURITY">🟡 HIGH (Security)</button>
+        <button class="tier-btn" data-tier="HIGH_COMPLIANCE">🟡 HIGH (Compliance)</button>
+        <button class="tier-btn" data-tier="MEDIUM">🟢 MEDIUM</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Model Pool &amp; Weights</h2>
+      <table id="poolTable">
+        <thead><tr><th>Model</th><th>Provider</th><th>Weight</th><th>Share</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="stats-row" style="margin-top:0.75rem;">
+        <span>Total weight: <strong id="totalWeight">—</strong></span>
+        <span>Providers: <strong id="providerCount">—</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT: Simulation ═══ -->
+  <div>
+    <div class="card">
+      <h2>Simulation</h2>
+      <div class="sim-controls">
+        <button class="sim-btn run" id="btnRun1">Run 1</button>
+        <button class="sim-btn run" id="btnRun10">Run 10</button>
+        <button class="sim-btn run" id="btnRun100">Run 100</button>
+        <button class="sim-btn run" id="btnRun1000">Run 1,000</button>
+        <button class="sim-btn stress" id="btnRun10000">Stress 10K</button>
+        <button class="sim-btn reset" id="btnReset">Reset</button>
+      </div>
+
+      <div class="results-grid" id="resultsGrid"></div>
+      <div class="drift-warning" id="driftWarning">
+        ⚠ Weight drift detected — actual distribution differs from target by &gt;5%
+      </div>
+
+      <h2 style="margin-top:1.25rem;">Invocation Log (last 50)</h2>
+      <div class="log" id="logContainer"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════
+// Tier definitions — mirrors src/shared/model-router.ts
+// ═══════════════════════════════════════════════
+
+const TIERS = {
+  CRITICAL: {
+    name: 'CRITICAL',
+    mode: 'weighted',
+    models: [
+      { id: 'claude-opus-4.8',   provider: 'Anthropic (Bedrock)',  weight: 80, color: '#38bdf8' },
+      { id: 'gpt-5.5',           provider: 'OpenAI (Bedrock)',      weight: 20, color: '#a78bfa' },
+    ],
+  },
+  HIGH_SECURITY: {
+    name: 'HIGH (Security)',
+    mode: 'weighted',
+    models: [
+      { id: 'claude-opus-4.8',   provider: 'Anthropic (Bedrock)',  weight: 70, color: '#38bdf8' },
+      { id: 'gpt-5.5',           provider: 'OpenAI (Bedrock)',      weight: 30, color: '#a78bfa' },
+    ],
+  },
+  HIGH_COMPLIANCE: {
+    name: 'HIGH (Compliance)',
+    mode: 'weighted',
+    models: [
+      { id: 'gpt-5.5',           provider: 'OpenAI (Bedrock)',      weight: 60, color: '#a78bfa' },
+      { id: 'claude-opus-4.8',   provider: 'Anthropic (Bedrock)',  weight: 40, color: '#38bdf8' },
+    ],
+  },
+  MEDIUM: {
+    name: 'MEDIUM',
+    mode: 'failover',
+    models: [
+      { id: 'claude-sonnet-4.6',  provider: 'Anthropic (Bedrock)',  weight: 0, color: '#64748b', primary: true },
+      { id: 'deepseek-v4-pro',    provider: 'DeepSeek (OpenCode)',   weight: 0, color: '#34d399', fallback: true },
+      { id: 'gpt-5.5',            provider: 'OpenAI (Bedrock)',      weight: 0, color: '#a78bfa', fallback: true },
+    ],
+  },
+};
+
+let currentTier = 'CRITICAL';
+let counters = {};
+let totalRuns = 0;
+let logEntries = [];
+
+function resetCounters() {
+  const tier = TIERS[currentTier];
+  counters = {};
+  tier.models.forEach(m => counters[m.id] = 0);
+  totalRuns = 0;
+  logEntries = [];
+}
+
+// Weighted random selection (identical algorithm to model-router.ts)
+function selectWeighted(models) {
+  const activeModels = models.filter(m => m.weight > 0);
+  if (activeModels.length === 0) return models[0]; // fallback for failover tiers
+
+  const totalWeight = activeModels.reduce((sum, m) => sum + m.weight, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const model of activeModels) {
+    roll -= model.weight;
+    if (roll <= 0) return model;
+  }
+  return activeModels[activeModels.length - 1];
+}
+
+function runSimulation(n) {
+  const tier = TIERS[currentTier];
+  for (let i = 0; i < n; i++) {
+    const selected = tier.mode === 'weighted' ? selectWeighted(tier.models) : (tier.models.find(m => m.primary) || tier.models[0]);
+    counters[selected.id] = (counters[selected.id] || 0) + 1;
+    totalRuns++;
+    logEntries.unshift({ idx: totalRuns, model: selected });
+    if (logEntries.length > 50) logEntries.pop();
+  }
+  render();
+}
+
+function render() {
+  const tier = TIERS[currentTier];
+
+  // ── Pool table ──
+  const tbody = document.querySelector('#poolTable tbody');
+  const totalWeight = tier.models.reduce((s, m) => s + m.weight, 0);
+  tbody.innerHTML = tier.models.map(m => {
+    const share = totalWeight > 0 ? ((m.weight / totalWeight) * 100).toFixed(0) : (m.primary ? 'primary' : 'fallback');
+    const providerClass = m.provider.includes('Anthropic') ? 'provider-bedrock' :
+                          m.provider.includes('OpenAI') ? 'provider-openai' : 'provider-litellm';
+    return `<tr>
+      <td><span class="model-name">${m.id}</span></td>
+      <td><span class="provider-badge ${providerClass}">${m.provider}</span></td>
+      <td>
+        <div class="weight-bar-wrap">
+          <div class="weight-bar"><div class="weight-bar-fill" style="width:${totalWeight > 0 ? (m.weight/totalWeight)*100 : 0}%;background:${m.color}"></div></div>
+          ${tier.mode === 'weighted' ? `<input class="weight-input" type="number" min="0" max="100" value="${m.weight}" data-model="${m.id}" onchange="updateWeight('${m.id}', this.value)">` : `<span style="font-size:0.7rem;color:var(--muted)">${m.primary ? 'Primary' : 'Fallback'}</span>`}
+        </div>
+      </td>
+      <td class="weight-pct">${share}${tier.mode === 'weighted' ? '%' : ''}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('totalWeight').textContent = totalWeight;
+  document.getElementById('providerCount').textContent = new Set(tier.models.map(m => m.provider)).size;
+
+  // ── Results grid ──
+  const grid = document.getElementById('resultsGrid');
+  grid.innerHTML = tier.models.map(m => {
+    const count = counters[m.id] || 0;
+    const actualPct = totalRuns > 0 ? ((count / totalRuns) * 100) : 0;
+    const expectedPct = totalWeight > 0 ? (m.weight / totalWeight) * 100 : 0;
+    const drift = Math.abs(actualPct - expectedPct);
+    const pctClass = drift > 5 ? 'over' : drift > 2 ? 'under' : '';
+    return `<div class="result-item">
+      <div class="count" style="color:${m.color}">${count.toLocaleString()}</div>
+      <div class="label">${m.id}</div>
+      ${tier.mode === 'weighted' ? `<div class="pct ${pctClass}">${actualPct.toFixed(1)}% (target ${expectedPct.toFixed(0)}%)</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // ── Log ──
+  const log = document.getElementById('logContainer');
+  log.innerHTML = logEntries.map(e => {
+    const m = e.model;
+    return `<div class="log-entry">
+      <span class="idx">#${e.idx}</span>
+      <span><span class="bar" style="background:${m.color}"></span><span class="selected">${m.id}</span></span>
+      <span style="color:var(--muted)">${m.provider}</span>
+    </div>`;
+  }).join('');
+
+  // ── Drift check ──
+  if (tier.mode === 'weighted' && totalRuns >= 10) {
+    const maxDrift = tier.models.reduce((max, m) => {
+      const actual = totalRuns > 0 ? ((counters[m.id]||0)/totalRuns)*100 : 0;
+      const expected = totalWeight > 0 ? (m.weight/totalWeight)*100 : 0;
+      return Math.max(max, Math.abs(actual - expected));
+    }, 0);
+    document.getElementById('driftWarning').classList.toggle('show', maxDrift > 5 && totalRuns >= 100);
+  }
+}
+
+function updateWeight(modelId, val) {
+  const w = Math.max(0, Math.min(100, parseInt(val) || 0));
+  const tier = TIERS[currentTier];
+  const model = tier.models.find(m => m.id === modelId);
+  if (model) model.weight = w;
+  resetCounters();
+  render();
+}
+
+// ── Tier switching ──
+document.querySelectorAll('.tier-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTier = btn.dataset.tier;
+    resetCounters();
+    render();
+  });
+});
+
+// ── Buttons ──
+function bind(id, n) { document.getElementById(id).addEventListener('click', () => runSimulation(n)); }
+bind('btnRun1', 1);
+bind('btnRun10', 10);
+bind('btnRun100', 100);
+bind('btnRun1000', 1000);
+bind('btnRun10000', 10000);
+document.getElementById('btnReset').addEventListener('click', () => { resetCounters(); render(); });
+
+// Init
+resetCounters();
+render();
+</script>
+</body>
+</html>
