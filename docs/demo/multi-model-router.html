@@ -58,6 +58,10 @@
   .provider-bedrock { background: rgba(56,189,248,0.15); color: var(--accent); }
   .provider-openai { background: rgba(167,139,250,0.15); color: var(--purple); }
   .provider-litellm { background: rgba(52,211,153,0.15); color: var(--green); }
+  .provider-amazon { background: rgba(249,115,22,0.15); color: #f97316; }
+  .provider-meta { background: rgba(6,182,212,0.15); color: #06b6d4; }
+  .provider-mistral { background: rgba(250,204,21,0.15); color: #facc15; }
+  .provider-other { background: rgba(236,72,153,0.15); color: #ec4899; }
 
   .weight-bar-wrap { display: flex; align-items: center; gap: 0.5rem; }
   .weight-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
@@ -224,14 +228,35 @@ const TIERS = {
   },
 };
 
-// Available models that can be added to any tier
+// Available models that can be added to any tier (June 2026 Bedrock catalog)
 const AVAILABLE_MODELS = [
-  { id: 'claude-fable-5',     provider: 'Anthropic (Bedrock)',  color: '#fbbf24' },
-  { id: 'claude-opus-4.8',    provider: 'Anthropic (Bedrock)',  color: '#38bdf8' },
-  { id: 'claude-sonnet-4.6',  provider: 'Anthropic (Bedrock)',  color: '#64748b' },
-  { id: 'gpt-5.5',            provider: 'OpenAI (Bedrock)',     color: '#a78bfa' },
-  { id: 'deepseek-v4-pro',    provider: 'DeepSeek (OpenCode)',  color: '#34d399' },
-  { id: 'deepseek-v4-flash',  provider: 'DeepSeek (OpenCode)',  color: '#22c55e' },
+  // ── Anthropic Claude ──
+  { id: 'claude-fable-5',       provider: 'Anthropic (Bedrock)',  color: '#fbbf24' },
+  { id: 'claude-opus-4.8',      provider: 'Anthropic (Bedrock)',  color: '#38bdf8' },
+  { id: 'claude-opus-4.7',      provider: 'Anthropic (Bedrock)',  color: '#0ea5e9' },
+  { id: 'claude-sonnet-4.6',    provider: 'Anthropic (Bedrock)',  color: '#64748b' },
+  { id: 'claude-haiku-4.5',     provider: 'Anthropic (Bedrock)',  color: '#94a3b8' },
+  // ── OpenAI ──
+  { id: 'gpt-5.5',              provider: 'OpenAI (Bedrock)',     color: '#a78bfa' },
+  { id: 'gpt-5.4',              provider: 'OpenAI (Bedrock)',     color: '#8b5cf6' },
+  // ── Amazon Nova ──
+  { id: 'nova-premier',         provider: 'Amazon (Bedrock)',     color: '#f97316' },
+  { id: 'nova-pro',             provider: 'Amazon (Bedrock)',     color: '#ea580c' },
+  { id: 'nova-lite',            provider: 'Amazon (Bedrock)',     color: '#c2410c' },
+  // ── Meta Llama ──
+  { id: 'llama-4-maverick',     provider: 'Meta (Bedrock)',       color: '#06b6d4' },
+  { id: 'llama-4-scout',        provider: 'Meta (Bedrock)',       color: '#0891b2' },
+  { id: 'llama-3.3-70b',        provider: 'Meta (Bedrock)',       color: '#0e7490' },
+  // ── Mistral ──
+  { id: 'mistral-large-3',      provider: 'Mistral (Bedrock)',    color: '#facc15' },
+  { id: 'mistral-small-4',      provider: 'Mistral (Bedrock)',    color: '#eab308' },
+  // ── DeepSeek (via OpenCode Go / LiteLLM) ──
+  { id: 'deepseek-v4-pro',      provider: 'DeepSeek (OpenCode)',  color: '#34d399' },
+  { id: 'deepseek-v4-flash',    provider: 'DeepSeek (OpenCode)',  color: '#22c55e' },
+  // ── Other providers ──
+  { id: 'qwen3-235b',           provider: 'Qwen (Bedrock)',       color: '#ec4899' },
+  { id: 'glm-5.1',              provider: 'Z.AI (Bedrock)',       color: '#f43f5e' },
+  { id: 'kimi-k2.6',            provider: 'Moonshot (Bedrock)',   color: '#14b8a6' },
 ];
 
 let currentTier = 'CRITICAL';
@@ -295,7 +320,12 @@ function render() {
   tbody.innerHTML = tier.models.map(m => {
     const share = totalWeight > 0 ? ((m.weight / totalWeight) * 100).toFixed(0) : (m.primary ? 'primary' : 'fallback');
     const providerClass = m.provider.includes('Anthropic') ? 'provider-bedrock' :
-                          m.provider.includes('OpenAI') ? 'provider-openai' : 'provider-litellm';
+                          m.provider.includes('OpenAI') ? 'provider-openai' :
+                          m.provider.includes('Amazon') ? 'provider-amazon' :
+                          m.provider.includes('Meta') ? 'provider-meta' :
+                          m.provider.includes('Mistral') ? 'provider-mistral' :
+                          m.provider.includes('OpenCode') ? 'provider-litellm' :
+                          'provider-other';
     return `<tr>
       <td><span class="model-name">${m.id}</span></td>
       <td><span class="provider-badge ${providerClass}">${m.provider}</span></td>
