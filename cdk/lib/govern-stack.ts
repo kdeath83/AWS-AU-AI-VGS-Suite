@@ -9,6 +9,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
@@ -34,6 +35,17 @@ export class GovernStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: GovernStackProps) {
     super(scope, id, props);
+
+    // The shared execution role is created in SharedStack. Import it by ARN with
+    // addGrantsToResources so grants in this stack become resource policies on the local
+    // resource, rather than statements written into the role's policy — a resource that
+    // lives in SharedStack. Writing this stack's resource ARNs into a SharedStack policy
+    // would make SharedStack depend on this stack, and since this stack already depends on
+    // SharedStack, CDK reports a dependency cycle and refuses to synthesize.
+    const baseRole = iam.Role.fromRoleArn(this, 'BaseRoleRef', props.baseRole.roleArn, {
+      mutable: false,
+      addGrantsToResources: true,
+    });
 
     // ── QuickSight Dashboard Resources ──────────────────────────────────────
     // Data sources from S3, Neptune, CloudWatch.
@@ -62,15 +74,15 @@ export class GovernStack extends cdk.Stack {
       },
     });
 
-    // CloudWatch data source for metrics
+    // CloudWatch data source for metrics.
+    // NOTE: `DataSourceParameters` in the current CloudFormation spec has no CloudWatch
+    // member (it carries Athena, RDS, Redshift, Snowflake, … only), so the parameter
+    // block is omitted — a CLOUDWATCH data source is identified by `type` alone.
     const cloudWatchDataSource = new quicksight.CfnDataSource(this, 'QuickSightCloudWatchDataSource', {
       awsAccountId: cdk.Stack.of(this).account,
       dataSourceId: `${PROJECT_NAME}-cloudwatch-datasource`,
       name: `${PROJECT_NAME} CloudWatch Metrics`,
       type: 'CLOUDWATCH',
-      dataSourceParameters: {
-        cloudWatchParameters: {},
-      },
     });
 
     // Neptune data source (via Athena connector)
@@ -113,12 +125,16 @@ export class GovernStack extends cdk.Stack {
           source: { physicalTableId: 's3Table' },
         },
       },
-      refreshConfiguration: {
-        incrementalRefresh: {
-          lookbackWindow: {
-            columnName: 'timestamp',
-            size: 1,
-            sizeUnit: 'DAY',
+      // CfnDataSetProps has no top-level refreshConfiguration; the incremental refresh
+      // settings live under dataSetRefreshProperties.
+      dataSetRefreshProperties: {
+        refreshConfiguration: {
+          incrementalRefresh: {
+            lookbackWindow: {
+              columnName: 'timestamp',
+              size: 1,
+              sizeUnit: 'DAY',
+            },
           },
         },
       },
@@ -158,12 +174,16 @@ export class GovernStack extends cdk.Stack {
           source: { physicalTableId: 's3Table' },
         },
       },
-      refreshConfiguration: {
-        incrementalRefresh: {
-          lookbackWindow: {
-            columnName: 'last_evaluated',
-            size: 1,
-            sizeUnit: 'DAY',
+      // CfnDataSetProps has no top-level refreshConfiguration; the incremental refresh
+      // settings live under dataSetRefreshProperties.
+      dataSetRefreshProperties: {
+        refreshConfiguration: {
+          incrementalRefresh: {
+            lookbackWindow: {
+              columnName: 'last_evaluated',
+              size: 1,
+              sizeUnit: 'DAY',
+            },
           },
         },
       },
@@ -177,7 +197,9 @@ export class GovernStack extends cdk.Stack {
       versionDescription: 'Initial version with 5 core views',
       dashboardPublishOptions: {
         adHocFilteringOption: { availabilityStatus: 'ENABLED' },
-        exportToPDFOption: { availabilityStatus: 'ENABLED' },
+        // PDF export is no longer exposed by the CloudFormation dashboard API; CSV is
+        // the surviving export toggle and the one that needs a deliberate decision.
+        exportToCsvOption: { availabilityStatus: 'ENABLED' },
         sheetControlsOption: { visibilityState: 'EXPANDED' },
       },
       permissions: [
@@ -195,6 +217,8 @@ export class GovernStack extends cdk.Stack {
       bucketName: `${PROJECT_NAME}-prompts-${props.environment}-${this.account}`,
       encryption: s3.BucketEncryption.KMS,
       encryptionKey: props.kmsKey,
+      enforceSSL: true,
+      versioned: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
@@ -202,7 +226,7 @@ export class GovernStack extends cdk.Stack {
     // Lambda evaluation function for structured output scoring
     const promptEvaluationLambda = new lambda.Function(this, 'PromptEvaluationFunction', {
       functionName: `${PROJECT_NAME}-prompt-evaluator-${props.environment}`,
-      runtime: lambda.Runtime.PYTHON_3_12,
+      runtime: lambda.Runtime.PYTHON_3_14,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/govern/prompt-evaluation'),
       timeout: cdk.Duration.seconds(120),
@@ -213,7 +237,7 @@ export class GovernStack extends cdk.Stack {
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
     this.promptOptimizationBucket.grantReadWrite(promptEvaluationLambda);
@@ -221,7 +245,7 @@ export class GovernStack extends cdk.Stack {
     // ── Lambda: Dashboard Data Prep ─────────────────────────────────────────
     const dashboardDataPrep = new lambda.Function(this, 'DashboardDataPrep', {
       functionName: `${PROJECT_NAME}-dashboard-data-prep-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/govern/dashboard-data-prep'),
       timeout: cdk.Duration.seconds(300),
@@ -235,7 +259,7 @@ export class GovernStack extends cdk.Stack {
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
     // Schedule every 5 minutes for standard metrics
@@ -253,6 +277,7 @@ export class GovernStack extends cdk.Stack {
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 3,
         queue: new sqs.Queue(this, 'NlSummaryDLQ', {
@@ -260,13 +285,14 @@ export class GovernStack extends cdk.Stack {
           retentionPeriod: cdk.Duration.days(14),
           encryption: sqs.QueueEncryption.KMS,
           encryptionMasterKey: props.kmsKey,
+          enforceSSL: true,
         }),
       },
     });
 
     const nlSummaryGenerator = new lambda.Function(this, 'NlSummaryGenerator', {
       functionName: `${PROJECT_NAME}-nl-summary-generator-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/govern/nl-summary-generator'),
       timeout: cdk.Duration.seconds(120),
@@ -280,13 +306,16 @@ export class GovernStack extends cdk.Stack {
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
-    nlSummaryGenerator.addEventSource(new lambda.EventSourceMapping(this, 'NlSummaryQueueMapping', {
-      target: nlSummaryGenerator,
-      eventSourceArn: nlSummaryQueue.queueArn,
+    // SqsEventSource rather than a hand-built EventSourceMapping: the event source class
+    // grants the function permission to consume the queue (the raw construct did not), and
+    // reportBatchItemFailures makes the handler's `batchItemFailures` response
+    // authoritative — without it one bad record replays the entire batch.
+    nlSummaryGenerator.addEventSource(new lambdaEventSources.SqsEventSource(nlSummaryQueue, {
       batchSize: 1,
+      reportBatchItemFailures: true,
     }));
 
     // ── Escalation Topic ─────────────────────────────────────────────────────
@@ -299,7 +328,7 @@ export class GovernStack extends cdk.Stack {
     // ── Lambda: Escalation Router ───────────────────────────────────────────
     const escalationRouter = new lambda.Function(this, 'EscalationRouter', {
       functionName: `${PROJECT_NAME}-escalation-router-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/govern/escalation-router'),
       timeout: cdk.Duration.seconds(60),
@@ -311,7 +340,7 @@ export class GovernStack extends cdk.Stack {
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
     this.escalationTopic.grantPublish(escalationRouter);
@@ -336,6 +365,17 @@ export class GovernStack extends cdk.Stack {
     });
 
     // Medium risk events → delayed escalation (15 min SLA)
+    // Dead-letter queue for medium-risk escalations that fail processing repeatedly.
+    // AwsSolutions-SQS3: without one, a message that fails every receive attempt is
+    // dropped once the retention period expires, with no evidence trail.
+    const mediumRiskDlq = new sqs.Queue(this, 'MediumRiskDLQ', {
+      queueName: `${PROJECT_NAME}-medium-risk-dlq-${props.environment}`,
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.KMS,
+      encryptionMasterKey: props.kmsKey,
+      enforceSSL: true,
+    });
+
     new events.Rule(this, 'MediumRiskEscalationRule', {
       ruleName: `${PROJECT_NAME}-medium-risk-escalation`,
       description: 'Escalate medium risk events within SLA',
@@ -353,6 +393,8 @@ export class GovernStack extends cdk.Stack {
         retentionPeriod: cdk.Duration.days(14),
         encryption: sqs.QueueEncryption.KMS,
         encryptionMasterKey: props.kmsKey,
+        enforceSSL: true,
+        deadLetterQueue: { queue: mediumRiskDlq, maxReceiveCount: 3 },
       }))],
     });
 

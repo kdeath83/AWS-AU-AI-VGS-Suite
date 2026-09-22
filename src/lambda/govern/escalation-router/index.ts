@@ -9,7 +9,7 @@ import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { logInfo, logError, logWarn, withRetry } from '../../../shared/utils';
 import { getEnvVar } from '../../../shared/config';
-import { EscalationEvent, RiskClassification } from '../../../shared/types';
+import { EscalationEvent, RISK_CLASSIFICATIONS, RiskClassification } from '../../../shared/types';
 
 const snsClient = new SNSClient({ region: process.env.AWS_REGION });
 const eventBridgeClient = new EventBridgeClient({ region: process.env.AWS_REGION });
@@ -116,7 +116,7 @@ function validateEscalationEvent(event: EscalationEvent): { valid: boolean; erro
   if (!event.eventType) errors.push('Missing eventType');
   if (!event.riskClassification) errors.push('Missing riskClassification');
   if (!event.description) errors.push('Missing description');
-  if (!Object.values(RiskClassification).includes(event.riskClassification)) {
+  if (!RISK_CLASSIFICATIONS.includes(event.riskClassification)) {
     errors.push(`Invalid riskClassification: ${event.riskClassification}`);
   }
   return { valid: errors.length === 0, errors };

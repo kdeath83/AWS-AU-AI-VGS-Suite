@@ -147,12 +147,23 @@ async function invokeHarnessWithFallback(
         { harnessArn, modelId: modelConfig.modelId, correlationId, attempt },
       );
 
-      // Extract response from streaming completion
+      // Extract response text from the harness response stream. The harness returns
+      // typed stream events: only contentBlockDelta deltas carry generated text, and
+      // failures arrive as their own events rather than as a non-2xx status code, so
+      // they are surfaced here instead of being silently dropped.
       let responseText = '';
-      if (result.completion) {
-        for await (const chunk of result.completion) {
-          if (chunk.chunk?.bytes) {
-            responseText += Buffer.from(chunk.chunk.bytes).toString('utf-8');
+      if (result.stream) {
+        for await (const chunk of result.stream) {
+          const delta = chunk.contentBlockDelta?.delta;
+          if (delta && 'text' in delta && typeof delta.text === 'string') {
+            responseText += delta.text;
+          }
+
+          const streamError =
+            chunk.internalServerException ?? chunk.runtimeClientError ?? chunk.validationException;
+          if (streamError) {
+            const detail = streamError.message ?? JSON.stringify(streamError);
+            throw new Error(`Harness stream error: ${detail}`);
           }
         }
       }

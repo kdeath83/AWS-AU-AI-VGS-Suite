@@ -12,7 +12,13 @@ import { ValidateStack } from '../lib/validate-stack';
 import { GovernStack } from '../lib/govern-stack';
 
 describe('CDK Stacks', () => {
-  const app = new cdk.App();
+  // Self-logging S3 buckets need this feature flag: without it CDK falls back to the
+  // legacy LogDeliveryWrite ACL, which conflicts with the evidence bucket's
+  // BUCKET_OWNER_ENFORCED ownership. The flag is also set in cdk.json; it is repeated
+  // here because cdk.json is only read by the CDK CLI, not by a bare `new cdk.App()`.
+  const app = new cdk.App({
+    context: { '@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy': true },
+  });
   const env = { account: '123456789012', region: 'ap-southeast-2' };
 
   const sharedStack = new SharedStack(app, 'TestSharedStack', {
@@ -142,8 +148,11 @@ describe('CDK Stacks', () => {
     });
 
     it('should create Lambda functions for secure operations', () => {
+      // Runtime is asserted at the latest version the CDK knows, which is also what
+      // AwsSolutions-L1 checks for — it resolves "latest" from Runtime.ALL, so pinning an
+      // older runtime here would fail the nag check as well as this test.
       template.hasResourceProperties('AWS::Lambda::Function', {
-        Runtime: 'nodejs22.x',
+        Runtime: 'nodejs24.x',
       });
     });
   });
@@ -174,17 +183,25 @@ describe('CDK Stacks', () => {
       });
     });
 
-    it('should create Bedrock agents', () => {
+    it('should create the agent registry Bedrock agent', () => {
+      // The stack creates exactly one AWS::Bedrock::Agent — the registry. The
+      // security-sentinel and governance-auditor harnesses are AgentCore harness ARNs
+      // exposed as stack outputs, not Bedrock agent resources, which is what the previous
+      // assertion expected (and so it could never pass).
       template.hasResourceProperties('AWS::Bedrock::Agent', {
-        AgentName: 'aws-au-ai-vgs-suite-security-sentinel-test',
-      });
-      template.hasResourceProperties('AWS::Bedrock::Agent', {
-        AgentName: 'aws-au-ai-vgs-suite-governance-auditor-test',
+        AgentName: 'aws-au-ai-vgs-suite-agent-registry-test',
       });
     });
 
+    it('should expose the security and governance harness ARNs as outputs', () => {
+      const outputs = Object.keys((template.toJSON() as Record<string, any>).Outputs ?? {});
+      expect(outputs).toContain('SecurityHarnessArn');
+      expect(outputs).toContain('GovernanceHarnessArn');
+    });
+
     it('should create Lambda functions for validate operations', () => {
-      template.resourceCountIsGreaterThan('AWS::Lambda::Function', 4);
+      // Template has no `resourceCountIsGreaterThan`; count the matching resources.
+      expect(Object.keys(template.findResources('AWS::Lambda::Function')).length).toBeGreaterThan(4);
     });
   });
 

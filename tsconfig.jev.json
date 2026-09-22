@@ -1,0 +1,9 @@
+{
+  "//": "Build target for the Jev control-testing module only. The repo's full tsconfig includes the CDK stacks, which carry pre-existing type errors against the pinned aws-cdk-lib; this target compiles the module and the control constants it imports, so the control test builds and runs independently of stack drift.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist/jev",
+    "rootDir": "."
+  },
+  "include": ["src/jev/**/*", "cdk/lib/constants.ts"]
+}

@@ -5,7 +5,11 @@
  */
 
 import { SQSEvent, SQSRecord, Context, SQSBatchResponse } from 'aws-lambda';
-import { SageMakerClient, CreateProcessingJobCommand } from '@aws-sdk/client-sagemaker';
+import {
+  SageMakerClient,
+  CreateProcessingJobCommand,
+  type CreateProcessingJobCommandInput,
+} from '@aws-sdk/client-sagemaker';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { logInfo, logError, logWarn, withRetry } from '../../../shared/utils';
@@ -20,11 +24,23 @@ const evidenceBucket = getEnvVar('EVIDENCE_BUCKET');
 const eventBusName = getEnvVar('EVENT_BUS_NAME');
 const sagemakerRoleArn = getEnvVar('SAGEMAKER_ROLE_ARN');
 
+/**
+ * Input/output shapes derived from the command itself. The SDK exports more than one
+ * `ProcessingInput` type across its training and processing APIs, so deriving from
+ * `CreateProcessingJobCommandInput` guarantees we validate against the shape this
+ * command actually accepts — and gives the string literals below a contextual type
+ * instead of letting them widen to `string`.
+ */
+type ProcessingJobInputs = NonNullable<CreateProcessingJobCommandInput['ProcessingInputs']>;
+type ProcessingJobOutputs = NonNullable<
+  NonNullable<CreateProcessingJobCommandInput['ProcessingOutputConfig']>['Outputs']
+>;
+
 async function submitClarifyJob(event: BiasReportGeneratorEvent, requestId: string): Promise<string> {
   const jobName = `bias-report-${event.modelName}-${Date.now()}`;
   const outputUri = `s3://${evidenceBucket}/bias-reports/${event.modelName}/${Date.now()}/`;
 
-  const processingInputs = [
+  const processingInputs: ProcessingJobInputs = [
     {
       InputName: 'dataset',
       S3Input: {
@@ -35,7 +51,7 @@ async function submitClarifyJob(event: BiasReportGeneratorEvent, requestId: stri
     },
   ];
 
-  const processingOutput = [
+  const processingOutput: ProcessingJobOutputs = [
     {
       OutputName: 'analysis',
       S3Output: {
@@ -93,7 +109,7 @@ async function storeBiasReportPlaceholder(event: BiasReportGeneratorEvent, jobNa
     modelName: event.modelName,
     analysisType: event.analysisType,
     biasMetrics: {
-      'demographic_parity',
+      'demographic_parity': 0.0,
       'equal_opportunity': 0.0,
       'disparate_impact': 0.0,
     },

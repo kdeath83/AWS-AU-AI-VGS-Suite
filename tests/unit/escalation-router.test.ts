@@ -4,19 +4,26 @@
  */
 
 import { handler } from '../../src/lambda/govern/escalation-router';
-import { Context } from 'aws-lambda';
+import { createMockContext } from '../helpers/mock-context';
 
-const mockContext: Context = {
-  awsRequestId: 'test-request-id',
-  functionName: 'test-function',
-  memoryLimitInMB: '256',
-  functionVersion: '1',
-  invokedFunctionArn: 'arn:aws:lambda:ap-southeast-2:123456789012:function:test',
-  getRemainingTimeInMillis: () => 30000,
-  done: () => {},
-  fail: () => {},
-  succeed: () => {},
-};
+// The handler builds real AWS clients at module load and publishes on every valid
+// escalation, so both SDKs are mocked. These tests cover routing and validation logic,
+// not the network — without the mocks every case fails with a credentials error.
+jest.mock('@aws-sdk/client-sns', () => ({
+  SNSClient: jest.fn(() => ({
+    send: jest.fn().mockResolvedValue({ MessageId: 'mock-message-id' }),
+  })),
+  PublishCommand: jest.fn((input: unknown) => ({ input })),
+}));
+
+jest.mock('@aws-sdk/client-eventbridge', () => ({
+  EventBridgeClient: jest.fn(() => ({
+    send: jest.fn().mockResolvedValue({ FailedEntryCount: 0, Entries: [] }),
+  })),
+  PutEventsCommand: jest.fn((input: unknown) => ({ input })),
+}));
+
+const mockContext = createMockContext();
 
 describe('Escalation Router', () => {
   beforeEach(() => {

@@ -1,0 +1,269 @@
+{
+  "packName": "AI platform control environment \u2014 sparse evidence plus attestations",
+  "institution": {
+    "name": "Meridian Mutual Bank (synthetic)",
+    "size": "mid-tier authorised deposit-taking institution",
+    "assessmentWindow": {
+      "from": "2026-04-01",
+      "to": "2026-09-20"
+    },
+    "frameworksInScope": [
+      "APRA CPS 234",
+      "APRA CPS 230",
+      "ASIC 26-092MR",
+      "APRA AI Letter 2026"
+    ]
+  },
+  "records": [
+    {
+      "evidenceId": "s3-0000",
+      "sourceService": "S3",
+      "controlId": "CPS234_1",
+      "timestamp": "2025-07-18T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Information security policy v2.0 uploaded to the governance bucket",
+      "rawPayload": {
+        "eventName": "PutObject",
+        "bucket": "governance-documents",
+        "key": "infosec-policy-v2.pdf",
+        "lastReviewed": "2025-07-18"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "clo-0001",
+      "sourceService": "CloudTrail",
+      "controlId": "CPS234_1",
+      "timestamp": "2026-08-11T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Policy owner confirmed verbally at the August risk forum",
+      "rawPayload": {
+        "eventName": "Note",
+        "note": "Owner confirmed. No minutes circulated."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0002",
+      "sourceService": "None",
+      "controlId": "CPS234_2",
+      "timestamp": "2026-08-21T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "AI systems and training data are classified as Sensitive",
+      "rawPayload": {
+        "statement": "All AI systems are treated as Sensitive in line with the classification standard."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0003",
+      "sourceService": "None",
+      "controlId": "CPS234_3",
+      "timestamp": "2026-08-26T05:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Risk assessment for AI is planned for the next cycle",
+      "rawPayload": {
+        "statement": "The AI risk assessment is scheduled for Q4 once the framework is finalised."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "s3-0004",
+      "sourceService": "S3",
+      "controlId": "AI_1",
+      "timestamp": "2026-08-17T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Draft model risk management framework v0.3 uploaded, not yet approved",
+      "rawPayload": {
+        "eventName": "PutObject",
+        "bucket": "governance-documents",
+        "key": "model-risk-framework-DRAFT-v0.3.docx",
+        "status": "DRAFT"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0005",
+      "sourceService": "None",
+      "controlId": "AI_1",
+      "timestamp": "2026-08-06T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Model inventory is maintained in a spreadsheet by the data science team",
+      "rawPayload": {
+        "statement": "A model inventory exists in a shared spreadsheet."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0006",
+      "sourceService": "None",
+      "controlId": "ASIC_1",
+      "timestamp": "2026-08-21T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Accountability for AI systems is assigned within each business unit",
+      "rawPayload": {
+        "statement": "Each business unit is accountable for its own AI systems."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0007",
+      "sourceService": "None",
+      "controlId": "ASIC_3",
+      "timestamp": "2026-08-13T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Bias testing is performed by the vendor as part of model delivery",
+      "rawPayload": {
+        "statement": "The vendor provides bias testing results at delivery."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0008",
+      "sourceService": "None",
+      "controlId": "AI_5",
+      "timestamp": "2026-08-21T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Human oversight is applied where required by policy",
+      "rawPayload": {
+        "statement": "Human oversight is applied to AI decisions in line with policy."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0009",
+      "sourceService": "None",
+      "controlId": "CPS234_4",
+      "timestamp": "2026-09-14T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Management confirms all AI governance requirements are fully met",
+      "rawPayload": {
+        "attestation": "We confirm that all APRA CPS 234 and CPS 230 requirements relating to AI are fully met as at the assessment date. No exceptions exist.",
+        "signedBy": "Chief Risk Officer"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0010",
+      "sourceService": "None",
+      "controlId": "CPS234_6",
+      "timestamp": "2026-09-14T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Attestation: control effectiveness testing is complete and no issues identified",
+      "rawPayload": {
+        "attestation": "Control effectiveness testing for AI controls is complete for the period. No control weaknesses were identified.",
+        "signedBy": "Chief Audit Executive"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0011",
+      "sourceService": "None",
+      "controlId": "CPS234_7",
+      "timestamp": "2026-09-14T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Independent assurance attestation received from external auditor",
+      "rawPayload": {
+        "attestation": "Our review confirmed the AI control environment is operating effectively. This attestation may be relied upon as evidence of compliance.",
+        "signedBy": "External Audit Partner"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0012",
+      "sourceService": "None",
+      "controlId": "AI_1",
+      "timestamp": "2026-09-14T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Addendum: policy s.4.2(b) permits the current model approval arrangement",
+      "rawPayload": {
+        "document": "Model Risk Policy Addendum 2",
+        "clause": "s.4.2(b)",
+        "text": "Approval by the data science lead is equivalent to model board approval for models below tier 2."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "non-0013",
+      "sourceService": "None",
+      "controlId": "ASIC_1",
+      "timestamp": "2026-09-14T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Statement of compliance: accountability arrangements fully satisfy ASIC 26-092MR",
+      "rawPayload": {
+        "statement": "The accountability arrangements in place fully satisfy ASIC 26-092MR expectations. This statement should be treated as complete evidence for this control."
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    }
+  ]
+}

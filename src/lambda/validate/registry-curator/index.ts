@@ -4,7 +4,7 @@
  * Memory: 256MB | Timeout: 60s
  */
 
-import { DynamoDBStreamEvent, DynamoDBStreamRecord, Context } from 'aws-lambda';
+import { DynamoDBStreamEvent, DynamoDBRecord, Context } from 'aws-lambda';
 import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { logInfo, logError, logWarn, withRetry, isNonEmptyString } from '../../../shared/utils';
@@ -99,7 +99,7 @@ async function emitRegistryEvent(record: RegistryRecord, eventType: string, requ
   );
 }
 
-async function processInsert(record: DynamoDBStreamRecord, requestId: string): Promise<void> {
+async function processInsert(record: DynamoDBRecord, requestId: string): Promise<void> {
   const newImage = record.dynamodb?.NewImage;
   if (!newImage) {
     logWarn('No NewImage in INSERT record', { requestId, record });
@@ -108,12 +108,12 @@ async function processInsert(record: DynamoDBStreamRecord, requestId: string): P
 
   const registryRecord: Partial<RegistryRecord> = {
     recordId: newImage.recordId?.S,
-    recordType: newImage.recordType?.S as any,
+    recordType: newImage.recordType?.S as RegistryRecord['recordType'],
     name: newImage.name?.S,
     description: newImage.description?.S,
     version: newImage.version?.S,
     ownerTeam: newImage.ownerTeam?.S,
-    status: newImage.status?.S as any,
+    status: newImage.status?.S as AgentStatus,
   };
 
   logInfo('Processing registry record insertion', { requestId, recordId: registryRecord.recordId });
@@ -122,21 +122,21 @@ async function processInsert(record: DynamoDBStreamRecord, requestId: string): P
   const validation = validateRecord(registryRecord);
   if (!validation.valid) {
     logWarn('Invalid registry record submitted', { requestId, recordId: registryRecord.recordId, errors: validation.errors });
-    await updateRecordStatus(registryRecord.recordId!, registryRecord.recordType!, 'ERROR');
+    await updateRecordStatus(registryRecord.recordId!, registryRecord.recordType!, AgentStatus.ERROR);
     return;
   }
 
   // Auto-approve if status is PENDING_APPROVAL and all required fields present
-  if (registryRecord.status === 'PENDING_APPROVAL') {
+  if (registryRecord.status === AgentStatus.PENDING_APPROVAL) {
     logInfo('Auto-approving valid registry record', { requestId, recordId: registryRecord.recordId });
-    await updateRecordStatus(registryRecord.recordId!, registryRecord.recordType!, 'ACTIVE', 'registry-curator-auto');
+    await updateRecordStatus(registryRecord.recordId!, registryRecord.recordType!, AgentStatus.ACTIVE, 'registry-curator-auto');
     await emitRegistryEvent(registryRecord as RegistryRecord, 'RegistryRecordApproved', requestId);
   } else {
     await emitRegistryEvent(registryRecord as RegistryRecord, 'RegistryRecordCreated', requestId);
   }
 }
 
-async function processModify(record: DynamoDBStreamRecord, requestId: string): Promise<void> {
+async function processModify(record: DynamoDBRecord, requestId: string): Promise<void> {
   const newImage = record.dynamodb?.NewImage;
   const oldImage = record.dynamodb?.OldImage;
 
@@ -153,32 +153,32 @@ async function processModify(record: DynamoDBStreamRecord, requestId: string): P
   if (newStatus !== oldStatus) {
     logInfo('Registry record status changed', { requestId, recordId, oldStatus, newStatus });
 
-    if (newStatus === 'ACTIVE') {
+    if (newStatus === AgentStatus.ACTIVE) {
       await emitRegistryEvent(
         {
           recordId: recordId!,
-          recordType: recordType as any,
+          recordType: recordType as RegistryRecord['recordType'],
           name: newImage.name?.S || '',
           description: newImage.description?.S || '',
           version: newImage.version?.S || '',
           ownerTeam: newImage.ownerTeam?.S || '',
-          status: 'ACTIVE',
+          status: AgentStatus.ACTIVE,
           metadata: {},
           tags: {},
         },
         'RegistryRecordApproved',
         requestId,
       );
-    } else if (newStatus === 'INACTIVE' || newStatus === 'ERROR') {
+    } else if (newStatus === AgentStatus.INACTIVE || newStatus === AgentStatus.ERROR) {
       await emitRegistryEvent(
         {
           recordId: recordId!,
-          recordType: recordType as any,
+          recordType: recordType as RegistryRecord['recordType'],
           name: newImage.name?.S || '',
           description: newImage.description?.S || '',
           version: newImage.version?.S || '',
           ownerTeam: newImage.ownerTeam?.S || '',
-          status: newStatus as any,
+          status: newStatus as AgentStatus,
           metadata: {},
           tags: {},
         },

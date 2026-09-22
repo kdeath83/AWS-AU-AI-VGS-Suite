@@ -6,6 +6,7 @@
  */
 import * as cdk from 'aws-cdk-lib';
 import { AwsSolutionsChecks, NIST80053R5Checks, HIPAASecurityChecks } from 'cdk-nag';
+import { applyDocumentedSuppressions } from '../lib/nag-suppressions';
 import { SharedStack } from '../lib/shared-stack';
 import { SecureStack } from '../lib/secure-stack';
 import { ValidateStack } from '../lib/validate-stack';
@@ -93,6 +94,11 @@ if (enableCdkNag) {
     cdk.Aspects.of(stack).add(new NIST80053R5Checks());
     cdk.Aspects.of(stack).add(new HIPAASecurityChecks());
   });
+
+  // Findings this reference deployment accepts on purpose, each carrying a written reason.
+  // Everything that could reasonably be fixed was fixed in the stacks instead — see
+  // cdk/lib/nag-suppressions.ts for that list and for the reasoning on each entry here.
+  applyDocumentedSuppressions(stacks);
 }
 
 // ── Synth ───────────────────────────────────────────────────────────────────

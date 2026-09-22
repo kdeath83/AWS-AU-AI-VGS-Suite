@@ -17,6 +17,7 @@
  */
 
 import { RiskClassification } from './types';
+import type { HarnessModelConfiguration } from '@aws-sdk/client-bedrock-agentcore';
 
 // ── Model Provider & Config Types ──────────────────────────────────────────
 
@@ -229,7 +230,7 @@ export function selectModel(
 
 // ── Harness Model Payload Builder ──────────────────────────────────────────
 
-export function buildHarnessModelPayload(config: ModelConfig): Record<string, unknown> {
+export function buildHarnessModelPayload(config: ModelConfig): HarnessModelConfiguration {
   switch (config.provider) {
     case 'bedrock':
       return {
@@ -241,21 +242,49 @@ export function buildHarnessModelPayload(config: ModelConfig): Record<string, un
 
     case 'liteLlm':
       return {
-        liteLlmConfig: {
+        liteLlmModelConfig: {
           modelId: config.modelId,
+          // The harness liteLLM config exposes modelId/apiKeyArn/apiBase/maxTokens only.
+          // `additionalParams` has no slot here and is deliberately not forwarded.
           ...(config.apiBase ? { apiBase: config.apiBase } : {}),
           ...(config.apiKeyArn ? { apiKeyArn: config.apiKeyArn } : {}),
-          ...(config.additionalParams ? { additionalParams: config.additionalParams } : {}),
         },
       };
 
-    case 'openAi':
+    case 'openAi': {
+      // apiKeyArn is required by the harness config for OpenAI models: fail fast with a
+      // configuration error rather than send a request the service will reject.
+      if (!config.apiKeyArn) {
+        throw new Error(
+          `Model config for '${config.modelId}' is missing apiKeyArn (required for openAi providers)`,
+        );
+      }
       return {
         openAiModelConfig: {
           modelId: config.modelId,
-          apiFormat: config.apiFormat ?? 'responses',
+          apiKeyArn: config.apiKeyArn,
+          ...(config.apiBase ? { apiBase: config.apiBase } : {}),
+          // The OpenAI harness config accepts only 'responses' or 'chat_completions'.
+          // 'converse_stream' is a Bedrock API format: forwarding it here would be
+          // rejected by the service, so it falls back to the default instead.
+          apiFormat: config.apiFormat === 'chat_completions' ? 'chat_completions' : 'responses',
         },
       };
+    }
+
+    case 'gemini': {
+      if (!config.apiKeyArn) {
+        throw new Error(
+          `Model config for '${config.modelId}' is missing apiKeyArn (required for gemini providers)`,
+        );
+      }
+      return {
+        geminiModelConfig: {
+          modelId: config.modelId,
+          apiKeyArn: config.apiKeyArn,
+        },
+      };
+    }
 
     default:
       throw new Error(`Unsupported model provider: ${config.provider}`);

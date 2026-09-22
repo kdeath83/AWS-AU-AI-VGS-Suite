@@ -1,0 +1,1210 @@
+{
+  "packName": "AI platform control environment \u2014 full evidence pack",
+  "institution": {
+    "name": "Meridian Mutual Bank (synthetic)",
+    "size": "mid-tier authorised deposit-taking institution",
+    "assessmentWindow": {
+      "from": "2026-04-01",
+      "to": "2026-09-20"
+    },
+    "frameworksInScope": [
+      "APRA CPS 234",
+      "APRA CPS 230",
+      "ASIC 26-092MR",
+      "APRA AI Letter 2026"
+    ]
+  },
+  "records": [
+    {
+      "evidenceId": "aud-0000",
+      "sourceService": "AuditManager",
+      "controlId": "CPS234_1",
+      "timestamp": "2026-09-14T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "APRA CPS 234 assessment run completed; 47 controls evidenced, 0 not applicable",
+      "rawPayload": {
+        "eventName": "StartAssessmentRun",
+        "assessmentName": "APRA_CPS_234_2026_Q3",
+        "status": "COMPLETED",
+        "evidenceItems": 47
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "con-0001",
+      "sourceService": "Config",
+      "controlId": "CPS234_1",
+      "timestamp": "2026-09-11T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Config rule iam-password-policy COMPLIANT for all 214 IAM users",
+      "rawPayload": {
+        "eventName": "ConfigurationItemChangeNotification",
+        "configRuleName": "iam-password-policy",
+        "complianceType": "COMPLIANT",
+        "resourceCount": 214
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "clo-0002",
+      "sourceService": "CloudTrail",
+      "controlId": "CPS234_1",
+      "timestamp": "2026-08-30T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Information security policy v4.1 published and distributed to all staff role groups",
+      "rawPayload": {
+        "eventName": "CreatePolicyVersion",
+        "policyName": "infosec-framework-policy",
+        "documentVersion": "v4.1",
+        "distributionGroups": 12
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "s3-0003",
+      "sourceService": "S3",
+      "controlId": "CPS234_1",
+      "timestamp": "2026-08-23T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Policy review minutes signed by CISO and filed in evidence lake with object lock",
+      "rawPayload": {
+        "eventName": "PutObject",
+        "bucket": "apra-evidence-lake",
+        "key": "CPS234_1/policy-review-minutes-2026-08.pdf",
+        "objectLock": "GOVERNANCE",
+        "retainDays": 2555
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "mac-0004",
+      "sourceService": "Macie",
+      "controlId": "CPS234_2",
+      "timestamp": "2026-09-16T05:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Macie sensitive data discovery job completed across 41 S3 buckets; AI training data classified",
+      "rawPayload": {
+        "eventName": "MacieJobCompleted",
+        "jobId": "macie-ai-training-scan",
+        "bucketsScanned": 41,
+        "sensitiveFindings": 6
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "con-0005",
+      "sourceService": "Config",
+      "controlId": "CPS234_2",
+      "timestamp": "2026-09-09T05:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Config rule s3-bucket-public-read-prohibited COMPLIANT across asset buckets",
+      "rawPayload": {
+        "eventName": "ConfigurationItemChangeNotification",
+        "configRuleName": "s3-bucket-public-read-prohibited",
+        "complianceType": "COMPLIANT"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "bed-0006",
+      "sourceService": "Bedrock",
+      "controlId": "CPS234_2",
+      "timestamp": "2026-09-04T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "All 14 foundation models and 6 custom models tagged DataClassification=Sensitive with named owner",
+      "rawPayload": {
+        "eventName": "TagResource",
+        "resourceType": "bedrock:model",
+        "taggedResources": 20,
+        "requiredTags": [
+          "DataClassification",
+          "Owner",
+          "ManagedBy"
+        ]
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sec-0007",
+      "sourceService": "SecurityHub",
+      "controlId": "CPS234_3",
+      "timestamp": "2026-09-07T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "AI risk assessment updated for 6 AI use cases; inherent and residual ratings recorded",
+      "rawPayload": {
+        "eventName": "UpdateFinding",
+        "assessmentRef": "RA-2026-014",
+        "useCasesAssessed": 6,
+        "residualHigh": 1
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "gua-0008",
+      "sourceService": "GuardDuty",
+      "controlId": "CPS234_3",
+      "timestamp": "2026-09-13T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "GuardDuty threat detection active in all accounts; 9 findings triaged within SLA",
+      "rawPayload": {
+        "eventName": "UpdateDetector",
+        "detectorId": "gd-ap-southeast-2",
+        "status": "ENABLED",
+        "findingsTriaged": 9
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "con-0009",
+      "sourceService": "Config",
+      "controlId": "CPS234_3",
+      "timestamp": "2026-09-01T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Config rule guardduty-enabled-centralized COMPLIANT",
+      "rawPayload": {
+        "eventName": "ConfigurationItemChangeNotification",
+        "configRuleName": "guardduty-enabled-centralized",
+        "complianceType": "COMPLIANT"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "con-0010",
+      "sourceService": "Config",
+      "controlId": "CPS234_4",
+      "timestamp": "2026-09-15T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Config rule cloud-trail-enabled COMPLIANT; control implementation matches risk rating",
+      "rawPayload": {
+        "eventName": "ConfigurationItemChangeNotification",
+        "configRuleName": "cloud-trail-enabled",
+        "complianceType": "COMPLIANT"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "ssm-0011",
+      "sourceService": "SSM",
+      "controlId": "CPS234_4",
+      "timestamp": "2026-09-12T08:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Patch compliance 98.6% across 312 managed instances; 4 exemptions approved and documented",
+      "rawPayload": {
+        "eventName": "PatchComplianceReport",
+        "compliantInstances": 308,
+        "nonCompliant": 4,
+        "approvedExemptions": 4
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "clo-0012",
+      "sourceService": "CloudTrail",
+      "controlId": "CPS234_4",
+      "timestamp": "2026-08-26T05:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Configuration recorder updated to capture Bedrock and SageMaker resource types",
+      "rawPayload": {
+        "eventName": "PutConfigurationRecorder",
+        "resourceTypes": [
+          "AWS::Bedrock::Model",
+          "AWS::SageMaker::Endpoint",
+          "AWS::S3::Bucket"
+        ]
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sec-0013",
+      "sourceService": "SecurityHub",
+      "controlId": "CPS234_5",
+      "timestamp": "2026-09-17T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "HIGH",
+      "description": "Incident SEC-2026-061 resolved; root cause and remediation recorded",
+      "rawPayload": {
+        "eventName": "BatchUpdateFindings",
+        "incidentRef": "SEC-2026-061",
+        "workflowStatus": "RESOLVED",
+        "timeToResolveHours": 6.5
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      },
+      "findingId": "arn:aws:securityhub:ap-southeast-2:123456789012:finding/sec-2026-061"
+    },
+    {
+      "evidenceId": "eve-0014",
+      "sourceService": "EventBridge",
+      "controlId": "CPS234_5",
+      "timestamp": "2026-09-17T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "HIGH",
+      "description": "Incident response playbook invoked automatically on high-severity finding",
+      "rawPayload": {
+        "eventName": "PutEvents",
+        "ruleName": "vgs-incident-response",
+        "playbook": "contain-and-notify",
+        "executionId": "sfn-exec-8823"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sns-0015",
+      "sourceService": "SNS",
+      "controlId": "CPS234_5",
+      "timestamp": "2026-09-17T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Escalation notification delivered to on-call security and CISO distribution list",
+      "rawPayload": {
+        "eventName": "Publish",
+        "topicArn": "arn:aws:sns:ap-southeast-2:123456789012:vgs-escalation",
+        "delivered": 7
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "aud-0016",
+      "sourceService": "AuditManager",
+      "controlId": "CPS234_6",
+      "timestamp": "2026-09-14T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Quarterly control effectiveness testing completed for all 47 in-scope controls",
+      "rawPayload": {
+        "eventName": "StartAssessmentRun",
+        "assessmentName": "APRA_CPS_234_Q3_EFFECTIVENESS",
+        "controlsTested": 47,
+        "ineffective": 2
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "clo-0017",
+      "sourceService": "CloudWatch",
+      "controlId": "CPS234_6",
+      "timestamp": "2026-09-14T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Control testing alarm evaluated 1,440 times with no missed evaluation window",
+      "rawPayload": {
+        "eventName": "StateChange",
+        "alarmName": "vgs-control-test-freshness",
+        "evaluations": 1440,
+        "stateTransitions": 0
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "con-0018",
+      "sourceService": "Config",
+      "controlId": "CPS234_6",
+      "timestamp": "2026-09-08T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Conformance pack apra-cps234-pack compliance 96.4% with documented remediation plan for remainder",
+      "rawPayload": {
+        "eventName": "PutConformancePack",
+        "complianceScore": 96.4,
+        "nonCompliantRules": 3,
+        "remediationPlanRef": "REM-2026-009"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "aud-0019",
+      "sourceService": "AuditManager",
+      "controlId": "CPS234_7",
+      "timestamp": "2026-09-05T08:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Internal audit of AI control environment completed by independent function; 4 findings tracked",
+      "rawPayload": {
+        "eventName": "StartAssessmentRun",
+        "assessmentName": "IA_AI_CONTROLS_2026",
+        "auditor": "Group Internal Audit",
+        "findings": 4,
+        "openFindings": 1
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "con-0020",
+      "sourceService": "Config",
+      "controlId": "CPS234_7",
+      "timestamp": "2026-09-02T05:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Config rule cloud-trail-cloud-watch-logs-enabled COMPLIANT",
+      "rawPayload": {
+        "eventName": "ConfigurationItemChangeNotification",
+        "configRuleName": "cloud-trail-cloud-watch-logs-enabled",
+        "complianceType": "COMPLIANT"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "s3-0021",
+      "sourceService": "S3",
+      "controlId": "CPS234_7",
+      "timestamp": "2026-09-05T08:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Audit workpapers exported to evidence lake under object lock for 7-year retention",
+      "rawPayload": {
+        "eventName": "PutObject",
+        "bucket": "apra-evidence-lake",
+        "key": "CPS234_7/ia-workpapers-2026.zip",
+        "objectLock": "COMPLIANCE",
+        "retainDays": 2555
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "eve-0022",
+      "sourceService": "EventBridge",
+      "controlId": "CPS234_8",
+      "timestamp": "2026-09-17T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Material incident threshold rule matched; notification decision recorded as within threshold",
+      "rawPayload": {
+        "eventName": "PutEvents",
+        "ruleName": "apra-notification-threshold",
+        "incidentRef": "SEC-2026-061",
+        "notificationRequired": false,
+        "decisionRationale": "no customer impact, 6.5h containment"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sns-0023",
+      "sourceService": "SNS",
+      "controlId": "CPS234_8",
+      "timestamp": "2026-08-21T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "APRA notification pathway tested with the regulator contact list; delivery confirmed",
+      "rawPayload": {
+        "eventName": "Publish",
+        "topicArn": "arn:aws:sns:ap-southeast-2:123456789012:apra-notification",
+        "testDeliveryConfirmed": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "nep-0024",
+      "sourceService": "Neptune",
+      "controlId": "CPS234_9",
+      "timestamp": "2026-09-10T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Third-party AI dependency graph updated: 9 providers, 3 material, all with current risk assessments",
+      "rawPayload": {
+        "eventName": "CreateRelationship",
+        "providers": 9,
+        "materialProviders": 3,
+        "staleAssessments": 0
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "con-0025",
+      "sourceService": "Config",
+      "controlId": "CPS234_9",
+      "timestamp": "2026-08-29T08:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Config rule iam-user-no-policies-check COMPLIANT",
+      "rawPayload": {
+        "eventName": "ConfigurationItemChangeNotification",
+        "configRuleName": "iam-user-no-policies-check",
+        "complianceType": "COMPLIANT"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "bed-0026",
+      "sourceService": "Bedrock",
+      "controlId": "CPS234_9",
+      "timestamp": "2026-08-25T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Due diligence pack refreshed for two model providers including exit plan and data residency",
+      "rawPayload": {
+        "eventName": "TagResource",
+        "providersReviewed": 2,
+        "exitPlanDocumented": true,
+        "dataResidencyVerified": "ap-southeast-2"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "res-0027",
+      "sourceService": "ResilienceHub",
+      "controlId": "CPS230_1",
+      "timestamp": "2026-09-06T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Resilience Hub assessment completed for AI-dependent critical operations; 2 policy breaches remediated",
+      "rawPayload": {
+        "eventName": "StartAppAssessment",
+        "criticalOperations": 5,
+        "policyBreaches": 2,
+        "remediated": 2
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "clo-0028",
+      "sourceService": "CloudWatch",
+      "controlId": "CPS230_1",
+      "timestamp": "2026-08-31T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Operational risk indicators published monthly for 6 consecutive months",
+      "rawPayload": {
+        "eventName": "PutMetricData",
+        "metricNamespace": "VGS/OperationalRisk",
+        "monthsPublished": 6
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "bac-0029",
+      "sourceService": "Backup",
+      "controlId": "CPS230_2",
+      "timestamp": "2026-08-24T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "AWS Backup job completed for 100% of critical AI data stores; restore test passed",
+      "rawPayload": {
+        "eventName": "BackupJobCompleted",
+        "vault": "vgs-critical-vault",
+        "coveragePercent": 100,
+        "restoreTestDaysAgo": 27
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "rou-0030",
+      "sourceService": "Route53",
+      "controlId": "CPS230_2",
+      "timestamp": "2026-08-18T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Failover test executed for region loss scenario; RTO 42 minutes against a 60 minute objective",
+      "rawPayload": {
+        "eventName": "ChangeResourceRecordSets",
+        "testRef": "BCP-2026-02",
+        "rtoMinutes": 42,
+        "objectiveMinutes": 60
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "nep-0031",
+      "sourceService": "Neptune",
+      "controlId": "CPS230_3",
+      "timestamp": "2026-09-09T05:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Service provider register refreshed; all material providers have current disruption playbooks",
+      "rawPayload": {
+        "eventName": "CreateRelationship",
+        "providers": 11,
+        "withPlaybooks": 11
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "con-0032",
+      "sourceService": "Config",
+      "controlId": "CPS230_3",
+      "timestamp": "2026-09-03T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Provider account compliance monitored via Config aggregator; 0 unapproved deviations",
+      "rawPayload": {
+        "eventName": "GetAggregateComplianceDetails",
+        "aggregator": "vgs-org-aggregator",
+        "deviations": 0
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "iam-0033",
+      "sourceService": "IAM",
+      "controlId": "ASIC_1",
+      "timestamp": "2026-08-27T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Named accountable owner role created per AI system; 6 systems mapped to 6 owners",
+      "rawPayload": {
+        "eventName": "CreateRole",
+        "rolesCreated": 6,
+        "aiSystems": 6,
+        "ownerTagPresent": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "aud-0034",
+      "sourceService": "AuditManager",
+      "controlId": "ASIC_1",
+      "timestamp": "2026-08-27T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Governance control set evaluated; accountability evidence attached for all 6 AI systems",
+      "rawPayload": {
+        "eventName": "StartAssessmentRun",
+        "assessmentName": "ASIC_AI_GOVERNANCE_2026",
+        "systemsEvidenced": 6
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sag-0035",
+      "sourceService": "SageMaker",
+      "controlId": "ASIC_2",
+      "timestamp": "2026-09-11T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "SageMaker Clarify explainability job completed; SHAP baseline published for credit decisioning model",
+      "rawPayload": {
+        "eventName": "CreateProcessingJob",
+        "jobName": "clarify-explainability-credit-v3",
+        "baselinePublished": true,
+        "featuresExplained": 38
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "bed-0036",
+      "sourceService": "Bedrock",
+      "controlId": "ASIC_2",
+      "timestamp": "2026-09-07T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Model invocation logging enabled; 30-day queryable decision trail for all consumer-facing calls",
+      "rawPayload": {
+        "eventName": "PutModelInvocationLoggingConfiguration",
+        "loggingEnabled": true,
+        "retentionDays": 30,
+        "queryable": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sag-0037",
+      "sourceService": "SageMaker",
+      "controlId": "ASIC_3",
+      "timestamp": "2026-09-12T08:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Bias report generated for credit decisioning: disparate impact 0.91, within tolerance",
+      "rawPayload": {
+        "eventName": "CreateProcessingJob",
+        "jobName": "clarify-bias-credit-2026-08",
+        "disparateImpact": 0.91,
+        "toleranceFloor": 0.8
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sag-0038",
+      "sourceService": "SageMaker",
+      "controlId": "ASIC_3",
+      "timestamp": "2026-09-12T08:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Model Monitor bias drift baseline updated; 3 alerts raised and reviewed",
+      "rawPayload": {
+        "eventName": "UpdateMonitoringSchedule",
+        "scheduleName": "bias-drift-credit",
+        "alertsRaised": 3,
+        "reviewed": 3
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "glu-0039",
+      "sourceService": "Glue",
+      "controlId": "ASIC_4",
+      "timestamp": "2026-09-10T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "DataBrew profile job validated training dataset quality across 12 datasets; 2 failed gates blocked",
+      "rawPayload": {
+        "eventName": "StartJobRun",
+        "datasetsProfiled": 12,
+        "failedDataQualityGates": 2,
+        "blockedFromTraining": 2
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sag-0040",
+      "sourceService": "SageMaker",
+      "controlId": "ASIC_4",
+      "timestamp": "2026-09-10T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Model Monitor data quality baseline set; drift within threshold for 90 days",
+      "rawPayload": {
+        "eventName": "CreateMonitoringSchedule",
+        "scheduleName": "data-quality-credit",
+        "driftStatus": "IN_THRESHOLD",
+        "daysObserved": 90
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "bed-0041",
+      "sourceService": "Bedrock",
+      "controlId": "ASIC_5",
+      "timestamp": "2026-09-15T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Guardrails blocked 214 harmful or off-topic requests in consumer channel; weekly review held",
+      "rawPayload": {
+        "eventName": "GuardrailIntervened",
+        "guardrailId": "vgs-consumer-guardrail",
+        "blockedRequests": 214,
+        "weeklyReviewHeld": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "waf-0042",
+      "sourceService": "WAF",
+      "controlId": "ASIC_5",
+      "timestamp": "2026-09-15T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "WAF blocked 1,842 anomalous requests; no consumer harm events recorded",
+      "rawPayload": {
+        "eventName": "BlockedRequests",
+        "webAclName": "vgs-consumer-acl",
+        "blocked": 1842,
+        "harmEvents": 0
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sag-0043",
+      "sourceService": "SageMaker",
+      "controlId": "AI_1",
+      "timestamp": "2026-08-27T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Model approval board convened; 3 models approved, 1 deferred pending validation",
+      "rawPayload": {
+        "eventName": "CreateModelPackage",
+        "modelsApproved": 3,
+        "deferred": 1,
+        "boardDate": "2026-08-27"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "sag-0044",
+      "sourceService": "SageMaker",
+      "controlId": "AI_1",
+      "timestamp": "2026-09-08T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Model Monitor drift schedule active for all production models; retirement plan recorded for 2",
+      "rawPayload": {
+        "eventName": "UpdateMonitoringSchedule",
+        "schedulesActive": 8,
+        "retirementPlans": 2
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "bed-0045",
+      "sourceService": "Bedrock",
+      "controlId": "AI_1",
+      "timestamp": "2026-09-02T05:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Independent validation completed for high-risk model; validation report signed off",
+      "rawPayload": {
+        "eventName": "TagResource",
+        "modelId": "credit-decisioning-v3",
+        "validationOutcome": "PASS",
+        "validator": "Model Risk Committee"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "glu-0046",
+      "sourceService": "Glue",
+      "controlId": "AI_2",
+      "timestamp": "2026-09-01T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Training data lineage captured end to end for 12 datasets; provenance queryable",
+      "rawPayload": {
+        "eventName": "CreateCrawler",
+        "datasets": 12,
+        "lineageCaptured": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "mac-0047",
+      "sourceService": "Macie",
+      "controlId": "AI_2",
+      "timestamp": "2026-09-16T05:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "AI training and inference data classification current; 6 sensitive data assets registered",
+      "rawPayload": {
+        "eventName": "MacieJobCompleted",
+        "sensitiveAssets": 6,
+        "classificationCurrent": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "kms-0048",
+      "sourceService": "KMS",
+      "controlId": "AI_2",
+      "timestamp": "2026-08-30T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "All AI data stores encrypted with customer-managed keys; key rotation enabled",
+      "rawPayload": {
+        "eventName": "EnableKeyRotation",
+        "keysRotated": 9,
+        "kmsKeys": 9
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "nep-0049",
+      "sourceService": "Neptune",
+      "controlId": "AI_3",
+      "timestamp": "2026-09-10T06:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Third-party AI model oversight register current; model version pinning enforced",
+      "rawPayload": {
+        "eventName": "CreateRelationship",
+        "thirdPartyModels": 7,
+        "versionPinned": 7
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "bed-0050",
+      "sourceService": "Bedrock",
+      "controlId": "AI_3",
+      "timestamp": "2026-08-25T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Provider due diligence reassessed; two providers required remediation and delivered it",
+      "rawPayload": {
+        "eventName": "TagResource",
+        "providersReassessed": 4,
+        "remediationRequired": 2,
+        "remediationDelivered": 2
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "gua-0051",
+      "sourceService": "GuardDuty",
+      "controlId": "AI_4",
+      "timestamp": "2026-09-13T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "AI-specific threat detection rules active; adversarial probe campaign detected and contained",
+      "rawPayload": {
+        "eventName": "CreateDetector",
+        "aiThreatRules": 6,
+        "probeCampaignsDetected": 1,
+        "contained": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "ins-0052",
+      "sourceService": "Inspector",
+      "controlId": "AI_4",
+      "timestamp": "2026-09-04T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Inspector scan completed across AI inference infrastructure; 0 critical findings outstanding",
+      "rawPayload": {
+        "eventName": "StartAssessmentRun",
+        "criticalFindings": 0,
+        "highFindings": 3,
+        "allRemediated": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "bed-0053",
+      "sourceService": "Bedrock",
+      "controlId": "AI_4",
+      "timestamp": "2026-09-15T04:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Prompt injection detector deployed in front of consumer channel; 38 attempts blocked",
+      "rawPayload": {
+        "eventName": "GuardrailIntervened",
+        "injectionAttemptsBlocked": 38,
+        "channel": "consumer-web"
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "eve-0054",
+      "sourceService": "EventBridge",
+      "controlId": "AI_5",
+      "timestamp": "2026-09-11T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Human approval gate invoked for 100% of high-value AI decisions in the quarter",
+      "rawPayload": {
+        "eventName": "PutEvents",
+        "ruleName": "human-oversight-gate",
+        "decisionsGated": 1240,
+        "autoApproved": 0
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "ste-0055",
+      "sourceService": "StepFunctions",
+      "controlId": "AI_5",
+      "timestamp": "2026-09-11T07:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Oversight workflow completed 1,240 reviews; median reviewer time 4.2 minutes recorded",
+      "rawPayload": {
+        "eventName": "ExecutionSucceeded",
+        "executions": 1240,
+        "medianReviewMinutes": 4.2,
+        "overridesRecorded": 31
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "qui-0056",
+      "sourceService": "QuickSight",
+      "controlId": "AI_5",
+      "timestamp": "2026-08-31T03:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Oversight effectiveness dashboard published monthly to the AI governance committee",
+      "rawPayload": {
+        "eventName": "CreateDashboard",
+        "dashboard": "ai-oversight-effectiveness",
+        "monthlyPublications": 6
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "clo-0057",
+      "sourceService": "CloudWatch",
+      "controlId": "AI_6",
+      "timestamp": "2026-09-06T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "AI risk dashboard live with 42 metrics; alarm coverage reviewed each month",
+      "rawPayload": {
+        "eventName": "PutDashboard",
+        "metrics": 42,
+        "monthlyReviews": 6
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "qui-0058",
+      "sourceService": "QuickSight",
+      "controlId": "AI_6",
+      "timestamp": "2026-09-06T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Board pack delivered monthly for 6 consecutive months with AI risk section",
+      "rawPayload": {
+        "eventName": "CreateDashboard",
+        "boardPacks": 6,
+        "aiRiskSection": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    },
+    {
+      "evidenceId": "eve-0059",
+      "sourceService": "EventBridge",
+      "controlId": "AI_6",
+      "timestamp": "2026-09-06T09:00:00Z",
+      "accountId": "123456789012",
+      "region": "ap-southeast-2",
+      "severity": "LOW",
+      "description": "Monthly AI risk report generated and distributed automatically; delivery confirmed",
+      "rawPayload": {
+        "eventName": "PutEvents",
+        "ruleName": "ai-risk-monthly-report",
+        "reportsGenerated": 6,
+        "deliveryConfirmed": true
+      },
+      "metadata": {
+        "collectedBy": "audit-evidence-collector",
+        "collectionVersion": "1.0.0"
+      }
+    }
+  ]
+}
