@@ -101,7 +101,7 @@ async function collectConfigEvidence(requestId: string): Promise<EvidenceRecord[
 async function collectSecurityHubEvidence(requestId: string): Promise<EvidenceRecord[]> {
   const command = new GetFindingsCommand({
     MaxResults: 50,
-    SortCriteria: [{ Field: 'CreatedAt', SortOrder: 'DESC' }],
+    SortCriteria: [{ Field: 'CreatedAt', SortOrder: 'desc' }],
   });
 
   const response = await withRetry(

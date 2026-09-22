@@ -18,12 +18,15 @@ interface DetectionResult {
 
 // Regex-based detection patterns (complement to WAF layer)
 const DETECTION_PATTERNS: Array<{ pattern: RegExp; type: PromptInjectionAttempt['attackType']; weight: number }> = [
-  { pattern: /ignore\s+(all|previous|your)\s+(instructions?|rules?|constraints?)/i, type: 'DIRECT_INJECTION', weight: 0.9 },
+  // Qualifier words may stack ("ignore all previous instructions", "ignore the above
+  // rules"), so allow a bounded run of them between the verb and the noun.
+  { pattern: /ignore\s+(?:(?:all|any|the|your|my|these|those|previous|prior|earlier|above|preceding|system|original|new)\s+){0,4}(?:instructions?|rules?|constraints?|prompts?|directions?|guidelines?)/i, type: 'DIRECT_INJECTION', weight: 0.9 },
   { pattern: /(new\s+instruction|system\s+prompt|developer\s+mode)/i, type: 'DIRECT_INJECTION', weight: 0.85 },
   { pattern: /(DAN|do\s+anything\s+now|jailbreak|root\s+access)/i, type: 'JAILBREAK', weight: 0.95 },
   { pattern: /(disregard|override|bypass)\s+(your|the|all)\s+(instructions?|training|programming)/i, type: 'DIRECT_INJECTION', weight: 0.88 },
   { pattern: /(output\s+initialization|above\s+instructions|previous\s+constraints)/i, type: 'DIRECT_INJECTION', weight: 0.82 },
-  { pattern: /(translate\s+to|convert\s+to)\s+(bash|python|exec)/i, type: 'INDIRECT_INJECTION', weight: 0.75 },
+  // "translate this to bash" is as much an injection as "translate to bash".
+  { pattern: /(translate|convert)\s+(?:\w+\s+){0,3}to\s+(bash|python|shell|exec|powershell)/i, type: 'INDIRECT_INJECTION', weight: 0.75 },
   { pattern: /(send\s+.*to\s+email|exfiltrate|extract\s+data|dump\s+database)/i, type: 'DATA_EXFILTRATION', weight: 0.9 },
   { pattern: /(bearer\s+[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i, type: 'DATA_EXFILTRATION', weight: 0.85 },
 ];

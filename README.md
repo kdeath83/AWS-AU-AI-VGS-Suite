@@ -16,6 +16,39 @@ The **AWS AU AI VGS Suite** is a production-ready proof-of-concept that provides
 
 📄 **[Multi-Model Consistency Guide](docs/multi-model-consistency-banking.md)** — How to use Opus 4.8 + GPT-5.5 for critical banking operations without fine-tuning.
 
+🖥 **[Live Demo: Continuous Control Testing](https://kdeath83.github.io/AWS-AU-AI-VGS-Suite/demo/jev-control-testing.html)** — All 23 CPS 234 / CPS 230 / ASIC / APRA AI controls judged against four evidence packs in one API call. Move the pass mark and watch verdicts change at zero additional cost.
+
+📄 **[Continuous Control Testing with Jev](docs/jev-control-testing.md)** — How typed judgements turn control testing from a quarterly sample into an every-event check, at about $0.0012 per assessment.
+
+### Continuous control testing (`src/jev/`)
+
+Most controls are bounded judgement questions — *is the evidence sufficient, was the approval
+appropriate, does this activity comply*. The suite already collects the evidence; this module
+judges it. 23 controls are decomposed into **71 atomic elements** plus an evidence-sufficiency and
+a maturity judgement per control, sent as **117 typed assertions in a single request**. Jev
+evaluates them in parallel and returns probabilities; deterministic code routes each control to
+PASS, FAIL, ESCALATE or INSUFFICIENT_EVIDENCE and names the element that dragged it down.
+
+| Evidence pack | PASS | FAIL | ESCALATE | No evidence | Cost | Server |
+|---|---|---|---|---|---|---|
+| Strong (60 artefacts) | 6 | 2 | 15 | 0 | $0.001233 | 305 ms |
+| Weak (9 records, mostly stale) | 0 | 1 | 0 | 22 | $0.000716 | 261 ms |
+| Absent (nothing supplied) | 0 | 0 | 0 | 23 | $0.000638 | 157 ms |
+| Self-serving (attestations, no artefacts) | 0 | 0 | 1 | 21 | $0.000764 | 174 ms |
+
+The absent pack separates cleanly from the weak pack, which a five-point Likert survey cannot
+express. Management attestations moved maturity but produced **zero passes** — a claim about
+evidence is not evidence.
+
+```bash
+npm run jev:build
+export TYPESAFE_API_KEY=...
+npm run jev:strong                          # or weak / absent / self-serving
+npm run jev:assertions                      # print the library: 23 controls, 71 elements
+node dist/jev/src/jev/cli.js --replay reports/strong.json --pass-at 0.65   # re-policy, $0
+npx jest tests/unit/jev-control-tester.test.ts
+```
+
 The suite is organized into four CDK stacks that map to the three VGS modules plus a shared foundation:
 
 | Stack | Module | Purpose |
@@ -224,6 +257,38 @@ All stacks include:
 - `NIST80053R5Checks` — NIST 800-53 Rev 5
 - `HIPAASecurityChecks` — HIPAA security requirements
 - Custom APRA CPS 234 rules (defined in conformance pack)
+
+`cdk synth` completes with no findings. Every check either passes, is fixed in the stacks, or is
+accepted with a written reason in [`cdk/lib/nag-suppressions.ts`](cdk/lib/nag-suppressions.ts).
+That file is a decision log rather than a mute list: it names what was remediated, so an accepted
+finding can be told apart from an oversight. What is deferred, and why, is set out below.
+
+---
+
+## Deliberate Simplifications
+
+This is a reference implementation, not a hardened landing zone. The departures below are known
+and intentional. They are written down rather than left to be discovered on review — knowing what
+was deferred, and being able to say why, is part of the point of the exercise.
+
+| Simplification | Why it is accepted here | What a production deployment would do |
+|---|---|---|
+| **One shared execution role** for all thirteen functions across the four stacks (`baseRole`, created in `SharedStack`) | Keeps the IAM model small enough to read next to the control mapping. Thirteen per-function roles add noise that hides the architecture this repo exists to show. | A role per function, or per stack at minimum, with permissions assembled per workload. |
+| **No authorizer on the API** — the single method is an unauthenticated health check | The API exists to demonstrate the WAF and prompt-injection path, not to serve tenants. | Cognito user pool or IAM authorizer on every method. |
+| **No WAF logging destination** | WAF logging needs a log group named `aws-waf-logs-*` plus a resource policy; the ACL's activity is already on CloudWatch metrics. | Full request logging to a dedicated log group. |
+| **No S3 server access logging** | The audit trail is the CloudTrail organisation trail. It covers management events, **not** individual object reads — closing that gap needs a dedicated log-target bucket. | Server access logging to a log-target bucket, or S3 data events on the trail. |
+| **No cross-region replication** | Single-region by design. The evidence lake is versioned with a 7-year lifecycle, and CloudTrail validates its own log-file digests. | Replication to a second region with its own key and versioning. |
+| **No per-function reserved concurrency** | Back-pressure comes from the queues — visibility timeouts, batch sizes, bounded receive counts. Reserving a fixed number per function throttles the pollers instead. | Reserved concurrency sized per workload, managed at the account level. |
+| **No Lambda-level dead-letter destinations** | SQS-invoked functions fail into the source queue's DLQ, which is the correct destination for that invocation type. | The same, plus destinations on any asynchronous invocations. |
+| **No secret rotation schedule** | The secret holds a third-party model credential; rotation needs a Lambda implementing that provider's own rotation API. | A rotation Lambda per provider, or a secret the suite controls. |
+| **API stage caching disabled** | It bills per hour per cache size, for an endpoint that returns a health status. | Caching enabled and encrypted wherever responses are cacheable and expensive. |
+| **No AWS Backup plan on the registry table** | The table has point-in-time recovery covering the last 35 days, and its contents are reproducible from the registry's own source events. | The table registered in an AWS Backup plan with a vault. |
+
+Everything else the nag packs raise is **fixed in the stacks**: TLS enforcement on all queues and
+buckets, bucket versioning, KMS-encrypted VPC flow logs, encrypted notification topics, a
+dead-letter queue on the medium-risk queue, alarm actions wired to a real topic, current Lambda
+runtimes, Neptune auto minor version upgrade, a customer managed key on the SageMaker endpoint
+config, and public-IP auto-assignment off the NAT-only subnets.
 
 ---
 

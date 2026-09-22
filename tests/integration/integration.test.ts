@@ -243,7 +243,22 @@ async function testCloudTrailEnabled(): Promise<TestResult> {
 
 // ── Main Test Runner ─────────────────────────────────────────────────────────
 
-async function runIntegrationTests(): Promise<void> {
+export interface IntegrationSummary {
+  passed: number;
+  failed: number;
+  total: number;
+  failures: TestResult[];
+}
+
+/**
+ * Run every post-deployment check and return a summary.
+ *
+ * This returns rather than calling process.exit(): exiting from inside the runner
+ * terminates the whole jest worker when the suite is driven by jest, and hides the
+ * results behind an exit code. The direct-run wrapper at the bottom of this file turns
+ * the summary into an exit code instead.
+ */
+async function runIntegrationTests(): Promise<IntegrationSummary> {
   console.log('\n╔════════════════════════════════════════════════════════════════╗');
   console.log('║     AWS AU AI VGS Suite - Integration Tests                  ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
@@ -276,28 +291,51 @@ async function runIntegrationTests(): Promise<void> {
 
   const passed = results.filter((r) => r.passed).length;
   const failed = results.filter((r) => !r.passed).length;
+  const failures = results.filter((r) => !r.passed);
 
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`Results: ${passed} passed, ${failed} failed out of ${results.length} tests`);
 
   if (failed > 0) {
     console.log('\nFailed tests:');
-    results.filter((r) => !r.passed).forEach((r) => {
+    failures.forEach((r) => {
       console.log(`  ❌ ${r.test}: ${r.message}`);
     });
-    process.exit(1);
   } else {
     console.log('\n✅ All integration tests passed!');
-    process.exit(0);
   }
+
+  return { passed, failed, total: results.length, failures };
 }
 
-// Run if executed directly
+/**
+ * These checks run against a deployed environment, so they are skipped unless
+ * RUN_INTEGRATION=true is set. Without that flag the suite is inert rather than failing
+ * on a machine with no deployment:
+ *
+ *   RUN_INTEGRATION=true npx jest tests/integration
+ */
+describe('Deployed infrastructure', () => {
+  const runIntegration = process.env.RUN_INTEGRATION === 'true';
+
+  (runIntegration ? it : it.skip)(
+    'should satisfy all post-deployment checks',
+    async () => {
+      const summary = await runIntegrationTests();
+      expect(summary.failures).toEqual([]);
+    },
+    300_000,
+  );
+});
+
+// Run if executed directly: npx ts-node tests/integration/integration.test.ts
 if (require.main === module) {
-  runIntegrationTests().catch((error) => {
-    console.error('Integration tests failed:', error);
-    process.exit(1);
-  });
+  runIntegrationTests()
+    .then((summary) => process.exit(summary.failed > 0 ? 1 : 0))
+    .catch((error) => {
+      console.error('Integration tests failed:', error);
+      process.exit(1);
+    });
 }
 
 export { runIntegrationTests };

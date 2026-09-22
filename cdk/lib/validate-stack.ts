@@ -9,9 +9,11 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as neptune from 'aws-cdk-lib/aws-neptune';
@@ -36,6 +38,17 @@ export class ValidateStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: ValidateStackProps) {
     super(scope, id, props);
+
+    // The shared execution role is created in SharedStack. Import it by ARN with
+    // addGrantsToResources so grants in this stack become resource policies on the local
+    // resource, rather than statements written into the role's policy — a resource that
+    // lives in SharedStack. Writing this stack's resource ARNs into a SharedStack policy
+    // would make SharedStack depend on this stack, and since this stack already depends on
+    // SharedStack, CDK reports a dependency cycle and refuses to synthesize.
+    const baseRole = iam.Role.fromRoleArn(this, 'BaseRoleRef', props.baseRole.roleArn, {
+      mutable: false,
+      addGrantsToResources: true,
+    });
 
     // ── DynamoDB: Agent Registry ──────────────────────────────────────────────
     this.agentRegistryTable = new dynamodb.Table(this, 'AgentRegistryTable', {
@@ -95,6 +108,8 @@ export class ValidateStack extends cdk.Stack {
       dbClusterIdentifier: this.neptuneCluster.dbClusterIdentifier,
       dbInstanceIdentifier: `${PROJECT_NAME}-neptune-instance-1`,
       dbInstanceClass: 'db.t4g.medium',
+      // NIST/HIPAA-adjacent AwsSolutions-N2: let the service apply minor engine patches.
+      autoMinorVersionUpgrade: true,
     });
 
     // ── SageMaker Model Monitor Endpoint ────────────────────────────────────
@@ -125,6 +140,9 @@ export class ValidateStack extends cdk.Stack {
     // Model Monitor endpoint configuration (placeholder model — POC uses mock endpoint)
     new sagemaker.CfnEndpointConfig(this, 'ModelMonitorEndpointConfig', {
       endpointConfigName: this.modelMonitorEndpointConfigName,
+      // NIST/HIPAA SageMakerEndpointConfigurationKMSKeyConfigured: endpoint storage is
+      // otherwise encrypted with an AWS-owned key the account cannot audit or revoke.
+      kmsKeyId: props.kmsKey.keyArn,
       productionVariants: [
         {
           variantName: 'AllTraffic',
@@ -292,6 +310,17 @@ Your responsibilities:
       },
     });
 
+    // A raw CfnResource cannot stand in for an SNS topic here: targets.SnsTopic.bind()
+    // calls topic.grantPublish(), which only a real sns.Topic implements. The previous
+    // `as any` cast hid that until synth time, so the stack could never be deployed.
+    const registryNotificationsTopic = new sns.Topic(this, 'RegistryNotifications', {
+      topicName: `${PROJECT_NAME}-registry-notifications`,
+      // Matches the EscalationTopic pattern in the governance stack: CMK at rest, TLS in
+      // transit. AwsSolutions-SNS3 and *-SNSEncryptedKMS both flag the topic without these.
+      masterKey: props.kmsKey,
+      enforceSSL: true,
+    });
+
     // EventBridge rule for registry record changes
     new events.Rule(this, 'RegistryChangeRule', {
       ruleName: `${PROJECT_NAME}-registry-change-rule`,
@@ -301,12 +330,7 @@ Your responsibilities:
         source: [`${PROJECT_NAME}.agent-registry`],
         detailType: ['RegistryRecordCreated', 'RegistryRecordUpdated', 'RegistryRecordApproved', 'RegistryRecordRevoked'],
       },
-      targets: [new targets.SnsTopic(new cdk.CfnResource(this, 'RegistryNotifications', {
-        type: 'AWS::SNS::Topic',
-        properties: {
-          TopicName: `${PROJECT_NAME}-registry-notifications`,
-        },
-      }) as any)],
+      targets: [new targets.SnsTopic(registryNotificationsTopic)],
     });
 
     // ── Lambda: Model Drift Handler ──────────────────────────────────────────
@@ -316,6 +340,7 @@ Your responsibilities:
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 3,
         queue: new sqs.Queue(this, 'DriftHandlerDLQ', {
@@ -323,13 +348,14 @@ Your responsibilities:
           retentionPeriod: cdk.Duration.days(14),
           encryption: sqs.QueueEncryption.KMS,
           encryptionMasterKey: props.kmsKey,
+          enforceSSL: true,
         }),
       },
     });
 
     const modelDriftHandler = new lambda.Function(this, 'ModelDriftHandler', {
       functionName: `${PROJECT_NAME}-model-drift-handler-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/validate/model-drift-handler'),
       timeout: cdk.Duration.seconds(120),
@@ -343,14 +369,17 @@ Your responsibilities:
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
     this.agentRegistryTable.grantReadWriteData(modelDriftHandler);
-    modelDriftHandler.addEventSource(new lambda.EventSourceMapping(this, 'DriftQueueMapping', {
-      target: modelDriftHandler,
-      eventSourceArn: driftHandlerQueue.queueArn,
+    // SqsEventSource rather than a hand-built EventSourceMapping: the event source class
+    // grants the function permission to consume the queue (the raw construct did not), and
+    // reportBatchItemFailures makes the handler's `batchItemFailures` response
+    // authoritative — without it one bad record replays the entire batch.
+    modelDriftHandler.addEventSource(new lambdaEventSources.SqsEventSource(driftHandlerQueue, {
       batchSize: 1,
+      reportBatchItemFailures: true,
     }));
 
     // ── Lambda: Bias Report Generator ────────────────────────────────────────
@@ -360,6 +389,7 @@ Your responsibilities:
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 3,
         queue: new sqs.Queue(this, 'BiasReportDLQ', {
@@ -367,13 +397,14 @@ Your responsibilities:
           retentionPeriod: cdk.Duration.days(14),
           encryption: sqs.QueueEncryption.KMS,
           encryptionMasterKey: props.kmsKey,
+          enforceSSL: true,
         }),
       },
     });
 
     const biasReportGenerator = new lambda.Function(this, 'BiasReportGenerator', {
       functionName: `${PROJECT_NAME}-bias-report-generator-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/validate/bias-report-generator'),
       timeout: cdk.Duration.seconds(600),
@@ -387,13 +418,12 @@ Your responsibilities:
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
-    biasReportGenerator.addEventSource(new lambda.EventSourceMapping(this, 'BiasQueueMapping', {
-      target: biasReportGenerator,
-      eventSourceArn: biasReportQueue.queueArn,
+    biasReportGenerator.addEventSource(new lambdaEventSources.SqsEventSource(biasReportQueue, {
       batchSize: 1,
+      reportBatchItemFailures: true,
     }));
 
     // ── Lambda: Audit Evidence Collector ────────────────────────────────────
@@ -403,6 +433,7 @@ Your responsibilities:
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 3,
         queue: new sqs.Queue(this, 'AuditEvidenceDLQ', {
@@ -410,13 +441,14 @@ Your responsibilities:
           retentionPeriod: cdk.Duration.days(14),
           encryption: sqs.QueueEncryption.KMS,
           encryptionMasterKey: props.kmsKey,
+          enforceSSL: true,
         }),
       },
     });
 
     const auditEvidenceCollector = new lambda.Function(this, 'AuditEvidenceCollector', {
       functionName: `${PROJECT_NAME}-audit-evidence-collector-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/validate/audit-evidence-collector'),
       timeout: cdk.Duration.seconds(300),
@@ -430,13 +462,12 @@ Your responsibilities:
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
-    auditEvidenceCollector.addEventSource(new lambda.EventSourceMapping(this, 'AuditQueueMapping', {
-      target: auditEvidenceCollector,
-      eventSourceArn: auditEvidenceQueue.queueArn,
+    auditEvidenceCollector.addEventSource(new lambdaEventSources.SqsEventSource(auditEvidenceQueue, {
       batchSize: 5,
+      reportBatchItemFailures: true,
     }));
 
     // Scheduled evidence collection every 6 hours
@@ -450,7 +481,7 @@ Your responsibilities:
     // ── Lambda: Registry Curator ────────────────────────────────────────────
     const registryCurator = new lambda.Function(this, 'RegistryCurator', {
       functionName: `${PROJECT_NAME}-registry-curator-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/validate/registry-curator'),
       timeout: cdk.Duration.seconds(60),
@@ -462,20 +493,20 @@ Your responsibilities:
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
     this.agentRegistryTable.grantReadWriteData(registryCurator);
 
-    // Trigger on DynamoDB stream changes
-    registryCurator.addEventSource(new lambda.EventSourceMapping(this, 'RegistryStreamMapping', {
-      target: registryCurator,
-      eventSourceArn: this.agentRegistryTable.tableStreamArn!,
+    // Trigger on DynamoDB stream changes. DynamoEventSource derives the stream ARN from
+    // the table (which is created with NEW_AND_OLD_IMAGES) and grants the function
+    // stream-read permissions, which the raw construct did not.
+    registryCurator.addEventSource(new lambdaEventSources.DynamoEventSource(this.agentRegistryTable, {
       startingPosition: lambda.StartingPosition.LATEST,
       batchSize: 10,
-      filterPatterns: [
-        { eventName: lambda.FilterRule.isEqual('INSERT') },
-        { eventName: lambda.FilterRule.isEqual('MODIFY') },
+      filters: [
+        lambda.FilterCriteria.filter({ eventName: lambda.FilterRule.isEqual('INSERT') }),
+        lambda.FilterCriteria.filter({ eventName: lambda.FilterRule.isEqual('MODIFY') }),
       ],
     }));
 
@@ -486,6 +517,7 @@ Your responsibilities:
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 3,
         queue: new sqs.Queue(this, 'OrchestratorDLQ', {
@@ -493,13 +525,14 @@ Your responsibilities:
           retentionPeriod: cdk.Duration.days(14),
           encryption: sqs.QueueEncryption.KMS,
           encryptionMasterKey: props.kmsKey,
+          enforceSSL: true,
         }),
       },
     });
 
     const agentOrchestrator = new lambda.Function(this, 'AgentOrchestrator', {
       functionName: `${PROJECT_NAME}-agent-orchestrator-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/validate/agent-orchestrator'),
       timeout: cdk.Duration.seconds(300),
@@ -512,18 +545,24 @@ Your responsibilities:
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
-    agentOrchestrator.addEventSource(new lambda.EventSourceMapping(this, 'OrchestratorQueueMapping', {
-      target: agentOrchestrator,
-      eventSourceArn: orchestratorQueue.queueArn,
+    agentOrchestrator.addEventSource(new lambdaEventSources.SqsEventSource(orchestratorQueue, {
       batchSize: 1,
+      reportBatchItemFailures: true,
     }));
 
     // ── DLQ Monitoring Alarms ─────────────────────────────────────────────
     // Alert when messages land in any dead-letter queue (CPS 234-5 compliance).
-    const dlqAlarmTopic = `arn:aws:sns:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:${PROJECT_NAME}-alarms`;
+    // This was previously a hard-coded ARN string that was never attached to any alarm, so
+    // the alarms had no action and could never notify anyone (NIST/HIPAA
+    // CloudWatchAlarmAction).
+    const dlqAlarmTopic = new sns.Topic(this, 'DlqAlarmTopic', {
+      topicName: `${PROJECT_NAME}-dlq-alarms-${props.environment}`,
+      masterKey: props.kmsKey,
+      enforceSSL: true,
+    });
 
     // Orchestrator DLQ alarm
     new cloudwatch.Alarm(this, 'OrchestratorDLQAlarm', {
@@ -534,7 +573,7 @@ Your responsibilities:
       evaluationPeriods: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
+    }).addAlarmAction(new cdk.aws_cloudwatch_actions.SnsAction(dlqAlarmTopic));
 
     // Audit evidence DLQ alarm
     new cloudwatch.Alarm(this, 'AuditEvidenceDLQAlarm', {
@@ -545,7 +584,7 @@ Your responsibilities:
       evaluationPeriods: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
+    }).addAlarmAction(new cdk.aws_cloudwatch_actions.SnsAction(dlqAlarmTopic));
 
     // Drift handler DLQ alarm
     new cloudwatch.Alarm(this, 'DriftHandlerDLQAlarm', {
@@ -556,7 +595,7 @@ Your responsibilities:
       evaluationPeriods: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
+    }).addAlarmAction(new cdk.aws_cloudwatch_actions.SnsAction(dlqAlarmTopic));
 
     // Bias report DLQ alarm
     new cloudwatch.Alarm(this, 'BiasReportDLQAlarm', {
@@ -567,12 +606,14 @@ Your responsibilities:
       evaluationPeriods: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
+    }).addAlarmAction(new cdk.aws_cloudwatch_actions.SnsAction(dlqAlarmTopic));
 
     // ── Outputs ──────────────────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'NeptuneEndpoint', { value: this.neptuneCluster.attrEndpoint });
     new cdk.CfnOutput(this, 'AgentRegistryTableArn', { value: this.agentRegistryTable.tableArn });
-    new cdk.CfnOutput(this, 'ModelMonitorEndpointConfig', { value: this.modelMonitorEndpointConfigName });
+    // Logical id must differ from the CfnEndpointConfig above (same scope): construct ids
+    // have to be unique, and the clash meant the stack could not synthesize at all.
+    new cdk.CfnOutput(this, 'ModelMonitorEndpointConfigName', { value: this.modelMonitorEndpointConfigName });
     new cdk.CfnOutput(this, 'AuditAssessmentArn', { value: this.auditAssessmentArn });
     new cdk.CfnOutput(this, 'SecurityHarnessArn', { value: securityHarnessArn });
     new cdk.CfnOutput(this, 'GovernanceHarnessArn', { value: governanceHarnessArn });

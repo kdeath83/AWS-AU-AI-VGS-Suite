@@ -5,12 +5,20 @@
  */
 
 import { EventBridgeEvent, Context } from 'aws-lambda';
-import { SSMClient, DescribeInstancePatchesCommand, DescribePatchBaselinesCommand } from '@aws-sdk/client-ssm';
+import {
+  SSMClient,
+  DescribeInstancePatchesCommand,
+  DescribePatchBaselinesCommand,
+  DescribeInstanceInformationCommand,
+  PatchComplianceDataState,
+} from '@aws-sdk/client-ssm';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { logInfo, logError, withRetry } from '../../../shared/utils';
 import { getEnvVar } from '../../../shared/config';
 import { ComplianceStatus, EvidenceRecord } from '../../../shared/types';
+// constants.ts has no imports of its own, so it is safe to pull into a Lambda bundle.
+import { PROJECT_NAME } from '../../../../cdk/lib/constants';
 
 const ssmClient = new SSMClient({ region: process.env.AWS_REGION });
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
@@ -36,9 +44,12 @@ async function getInstancePatchCompliance(instanceId: string): Promise<PatchComp
 
   const response = await ssmClient.send(command);
 
-  const missingCount = response.Patches?.filter((p) => p.State === 'Missing').length || 0;
-  const failedCount = response.Patches?.filter((p) => p.State === 'Failed').length || 0;
-  const installedCount = response.Patches?.filter((p) => p.State === 'Installed').length || 0;
+  // PatchComplianceDataState values are upper-case ('MISSING', 'FAILED', 'INSTALLED').
+  // Comparing against mixed-case string literals never matched, so every instance
+  // reported as fully compliant.
+  const missingCount = response.Patches?.filter((p) => p.State === PatchComplianceDataState.Missing).length || 0;
+  const failedCount = response.Patches?.filter((p) => p.State === PatchComplianceDataState.Failed).length || 0;
+  const installedCount = response.Patches?.filter((p) => p.State === PatchComplianceDataState.Installed).length || 0;
 
   return {
     instanceId,
@@ -123,10 +134,23 @@ export async function handler(_event: EventBridgeEvent<string, unknown>, context
       Filters: [{ Key: 'NAME_PREFIX', Values: ['aws-au-ai-vgs-suite'] }],
     }));
 
-    // For POC: check a placeholder instance ID
-    // FIXME(M1): Replace placeholder with DescribeInstanceInformation.
-    // Use tag-based filtering: { Key: 'Project', Values: [PROJECT_NAME] }
-    // const instanceIds = ['i-placeholder-001'];
+    // Discover in-scope managed instances by project tag — the same filter the secure
+    // stack already uses for its SSM resource data sync. The placeholder this replaces
+    // referenced an undefined `instanceIds`, so the handler threw a ReferenceError on
+    // every invocation and never collected a single piece of evidence.
+    const instancesResponse = await ssmClient.send(
+      new DescribeInstanceInformationCommand({
+        Filters: [{ Key: 'tag:Project', Values: [PROJECT_NAME] }],
+      }),
+    );
+
+    const instanceIds = (instancesResponse.InstanceInformationList ?? [])
+      .map((info) => info.InstanceId)
+      .filter((id): id is string => Boolean(id));
+
+    if (instanceIds.length === 0) {
+      logInfo('No managed instances matched the project tag — nothing to assess', { requestId });
+    }
 
     for (const instanceId of instanceIds) {
       try {

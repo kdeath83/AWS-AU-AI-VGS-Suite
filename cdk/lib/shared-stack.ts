@@ -40,24 +40,49 @@ export class SharedStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
+    // Flow log destination, encrypted with the suite CMK. The group CDK creates for the
+    // `flowLogs` prop is unencrypted, which NIST/HIPAA CloudWatchLogGroupEncrypted flags,
+    // and DestinationOptions carries only S3 options — so the destination group is created
+    // here and attached below via addFlowLog.
+    const vpcFlowLogGroup = new logs.LogGroup(this, 'VpcFlowLogGroup', {
+      logGroupName: `/${PROJECT_NAME}/vpc-flow-logs/${props.environment}`,
+      retention: logs.RetentionDays.ONE_YEAR,
+      encryptionKey: this.kmsKey,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
     // ── VPC ─────────────────────────────────────────────────────────────────
-    // Private subnets across 2 AZs. No public subnets — all compute is private.
+    // Compute lives in private subnets with egress, across 2 AZs. NAT gateways have to
+    // sit in public subnets, so a small public tier is declared for them alone — no
+    // application compute is placed there.
     this.vpc = new ec2.Vpc(this, 'VgsVpc', {
       maxAzs: 2,
       natGateways: 2,
       subnetConfiguration: [
+        {
+          name: 'Public',
+          subnetType: ec2.SubnetType.PUBLIC,
+          cidrMask: 26,
+          // NIST/HIPAA VPCSubnetAutoAssignPublicIpDisabled: these subnets exist only for the
+          // NAT gateways, which hold their own elastic IPs, so instances placed here would
+          // get public addresses they do not need.
+          mapPublicIpOnLaunch: false,
+        },
         {
           name: 'Private',
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
           cidrMask: 24,
         },
       ],
-      flowLogs: {
-        cloudWatch: {
-          logFormat: ec2.FlowLogFileFormat.V2,
-          trafficType: ec2.FlowLogTrafficType.ALL,
-        },
-      },
+    });
+
+    // `FlowLogOptions.logFormat` selects which record *fields* to emit (LogFormat members
+    // such as SRC_ADDR, ACTION) — it is not the file format. FlowLogFileFormat
+    // (PLAIN_TEXT | PARQUET) belongs to FlowLogDestination.toS3(). Omitting logFormat uses
+    // the AWS default, which is the full v2 field set.
+    this.vpc.addFlowLog('FlowLogToCloudWatch', {
+      destination: ec2.FlowLogDestination.toCloudWatchLogs(vpcFlowLogGroup),
+      trafficType: ec2.FlowLogTrafficType.ALL,
     });
 
     // VPC Endpoints for AWS services (no public internet egress for service calls)
@@ -94,6 +119,7 @@ export class SharedStack extends cdk.Stack {
       bucketName: `${PROJECT_NAME}-evidence-${props.environment}-${this.account}`,
       encryption: s3.BucketEncryption.KMS,
       encryptionKey: this.kmsKey,
+      enforceSSL: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       versioned: true,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
@@ -159,6 +185,8 @@ export class SharedStack extends cdk.Stack {
         objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
         encryption: s3.BucketEncryption.KMS,
         encryptionKey: this.kmsKey,
+        enforceSSL: true,
+        versioned: true,
         lifecycleRules: [
           {
             transitions: [

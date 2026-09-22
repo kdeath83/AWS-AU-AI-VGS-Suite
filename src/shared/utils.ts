@@ -58,20 +58,28 @@ export const DEFAULT_RETRY_OPTIONS: RetryOptions = {
   },
 };
 
+/**
+ * Run an operation with exponential backoff.
+ *
+ * `options` is partial: anything omitted falls back to DEFAULT_RETRY_OPTIONS.
+ * When `getRemainingTimeMs` is supplied (Lambdas: `context.getRemainingTimeInMillis`),
+ * retrying stops rather than sleeping past the invocation deadline — a retry that
+ * cannot finish is worse than a failure that reports itself.
+ */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  options: RetryOptions = {},
-  logContext: Record<string, unknown> = {},
+  options: Partial<RetryOptions> = {},
+  logContext: LogContext = {},
   getRemainingTimeMs?: () => number,
 ): Promise<T> {
-  const opts = { ...DEFAULT_RETRY_OPTIONS, ...options };
+  const opts: RetryOptions = { ...DEFAULT_RETRY_OPTIONS, ...options };
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= opts.maxAttempts; attempt++) {
     try {
-      const result = await operation();
+      const result = await fn();
       if (attempt > 1) {
-        logInfo(`Operation succeeded after ${attempt} attempts`, { ...context, attempts: attempt });
+        logInfo(`Operation succeeded after ${attempt} attempts`, { ...logContext, attempts: attempt });
       }
       return result;
     } catch (error) {
@@ -79,18 +87,40 @@ export async function withRetry<T>(
       const isRetryable = opts.retryableErrorPredicate ? opts.retryableErrorPredicate(error) : true;
 
       if (!isRetryable || attempt === opts.maxAttempts) {
-        logError(`Operation failed after ${attempt} attempts (non-retryable or max reached)`, error, { ...context, attempt });
+        logError(
+          `Operation failed after ${attempt} attempts (non-retryable or max reached)`,
+          error,
+          { ...logContext, attempt },
+        );
         throw error;
       }
 
       const delay = Math.min(opts.baseDelayMs * Math.pow(2, attempt - 1), opts.maxDelayMs);
-      logWarn(`Retry attempt ${attempt}/${opts.maxAttempts} after ${delay}ms`, { ...context, attempt, delayMs: delay, errorMessage: (error as Error).message });
+      const remaining = getRemainingTimeMs ? getRemainingTimeMs() : undefined;
+      if (remaining !== undefined && remaining < delay + MIN_REMAINING_MS) {
+        logError(
+          `Abandoning retry: ${Math.round(remaining)}ms left in the invocation, next backoff is ${delay}ms`,
+          lastError,
+          { ...logContext, attempt, remainingMs: Math.round(remaining) },
+        );
+        throw lastError;
+      }
+
+      logWarn(`Retry attempt ${attempt}/${opts.maxAttempts} after ${delay}ms`, {
+        ...logContext,
+        attempt,
+        delayMs: delay,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       await sleep(delay);
     }
   }
 
   throw lastError;
 }
+
+/** Minimum remaining invocation time worth starting another backoff for. */
+export const MIN_REMAINING_MS = 250;
 
 // ── Circuit Breaker ─────────────────────────────────────────────────────────
 
@@ -118,11 +148,15 @@ export class CircuitBreaker {
   private successCount = 0;
   private lastFailureTime?: number;
   private halfOpenCalls = 0;
+  private readonly options: CircuitBreakerOptions;
 
+  /** Options are partial: anything omitted falls back to the defaults. */
   constructor(
     private readonly name: string,
-    private readonly options: CircuitBreakerOptions = DEFAULT_CIRCUIT_BREAKER_OPTIONS,
-  ) {}
+    options: Partial<CircuitBreakerOptions> = {},
+  ) {
+    this.options = { ...DEFAULT_CIRCUIT_BREAKER_OPTIONS, ...options };
+  }
 
   async execute<T>(operation: () => Promise<T>, context: LogContext = {}): Promise<T> {
     if (this.state === CircuitState.OPEN) {
@@ -201,7 +235,11 @@ export function isNonEmptyString(value: unknown): value is string {
 
 export function isValidARN(value: unknown): value is string {
   if (!isNonEmptyString(value)) return false;
-  return /^arn:aws[a-zA-Z-]*:[a-zA-Z0-9-]+:[a-zA-Z0-9-]*:\d{12}:[a-zA-Z/]+$/.test(value);
+  // Region and account may both be empty (S3 bucket and IAM ARNs, e.g.
+  // `arn:aws:s3:::bucket`), the account is exactly 12 digits when present, and the
+  // resource segment may itself contain colons (`function:my-function`) plus the
+  // wildcard and dot characters used in policy ARNs.
+  return /^arn:aws[a-zA-Z0-9-]*:[a-zA-Z0-9-]+:[a-zA-Z0-9-]*:(\d{12})?:[a-zA-Z0-9\-_/:.*]+$/.test(value);
 }
 
 export function isValidUUID(value: unknown): value is string {

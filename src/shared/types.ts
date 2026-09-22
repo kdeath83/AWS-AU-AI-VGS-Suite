@@ -11,6 +11,21 @@ export enum Environment {
   PROD = 'prod',
 }
 
+/**
+ * Risk classification levels.
+ *
+ * The runtime list and the type are defined together so validation code can check
+ * a value at runtime without falling back to a hand-maintained duplicate. Using
+ * `Object.values()` on the type alone is a compile error — a type has no runtime
+ * representation.
+ */
+export const RISK_CLASSIFICATIONS: readonly RiskClassification[] = [
+  'LOW',
+  'MEDIUM',
+  'HIGH',
+  'CRITICAL',
+];
+
 export type RiskClassification = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export enum ComplianceStatus {

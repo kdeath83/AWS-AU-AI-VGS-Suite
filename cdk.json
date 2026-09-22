@@ -24,6 +24,7 @@
     "enableCdkNag": true,
     "logRetentionDays": 365,
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/core:targetPartitions": [
       "aws",

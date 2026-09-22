@@ -1,0 +1,1128 @@
+{
+  "packName": "AI platform control environment — full evidence pack",
+  "model": "jev-1.13.0",
+  "requestId": "req_01a0c6e0a93f765ca0bb7e7be9a6051d",
+  "assertionLibraryVersion": "2.0.0",
+  "generatedAt": "2026-09-22T02:10:07.965Z",
+  "assertionCount": 117,
+  "combineRule": "all",
+  "usage": {
+    "inputTokens": 29369,
+    "outputTokens": 2868
+  },
+  "costUsd": 0.0012334980000000002,
+  "serverMs": 305,
+  "wallMs": 1381,
+  "thresholds": {
+    "evidenceFloor": 0.5,
+    "passAt": 0.8,
+    "failAt": 0.2,
+    "confidenceFloor": 0.45
+  },
+  "summary": {
+    "pass": 6,
+    "fail": 2,
+    "escalate": 15,
+    "insufficientEvidence": 0,
+    "meanMaturity": 3.016,
+    "elementCount": 71,
+    "elementsBelowPass": 27
+  },
+  "controls": [
+    {
+      "controlId": "CPS234_1",
+      "name": "Information Security Policy",
+      "framework": "APRA CPS 234",
+      "verdict": "FAIL",
+      "evidenceSupplied": 0.94,
+      "controlMet": 0.14,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_1__element_approved",
+          "key": "approved",
+          "requirement": "an information security policy framework is approved by the board or a delegated committee",
+          "probability": 0.19
+        },
+        {
+          "id": "CPS234_1__element_owned",
+          "key": "owned",
+          "requirement": "the framework names an accountable owner",
+          "probability": 0.14
+        },
+        {
+          "id": "CPS234_1__element_reviewed",
+          "key": "reviewed",
+          "requirement": "the framework is reviewed on a defined review cycle",
+          "probability": 0.37
+        },
+        {
+          "id": "CPS234_1__element_communicated",
+          "key": "communicated",
+          "requirement": "the framework is communicated to the staff it applies to",
+          "probability": 0.86
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 4,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_1__element_owned",
+      "weakestElementProbability": 0.14,
+      "maturity": 2.97,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.87,
+      "routingReason": "combined 0.14 at or below fail threshold 0.2; weakest element owned at 0.14",
+      "assertionIds": [
+        "CPS234_1__evidence_supplied",
+        "CPS234_1__element_approved",
+        "CPS234_1__element_owned",
+        "CPS234_1__element_reviewed",
+        "CPS234_1__element_communicated",
+        "CPS234_1__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS234_2",
+      "name": "Information Asset Classification",
+      "framework": "APRA CPS 234",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.93,
+      "controlMet": 0.53,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_2__element_scheme",
+          "key": "scheme",
+          "requirement": "information assets are classified under a documented classification scheme",
+          "probability": 0.62
+        },
+        {
+          "id": "CPS234_2__element_ai_covered",
+          "key": "ai_covered",
+          "requirement": "AI models, training data and prompts are included in the classification scheme",
+          "probability": 0.64
+        },
+        {
+          "id": "CPS234_2__element_handling",
+          "key": "handling",
+          "requirement": "handling requirements follow the assigned classification in practice",
+          "probability": 0.53
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_2__element_handling",
+      "weakestElementProbability": 0.53,
+      "maturity": 2.81,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.75,
+      "routingReason": "combined 0.53 sits between fail (0.2) and pass (0.8); weakest element handling at 0.53",
+      "assertionIds": [
+        "CPS234_2__evidence_supplied",
+        "CPS234_2__element_scheme",
+        "CPS234_2__element_ai_covered",
+        "CPS234_2__element_handling",
+        "CPS234_2__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS234_3",
+      "name": "Risk Assessment",
+      "framework": "APRA CPS 234",
+      "verdict": "FAIL",
+      "evidenceSupplied": 0.95,
+      "controlMet": 0.2,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_3__element_cyclical",
+          "key": "cyclical",
+          "requirement": "information security risks are assessed on a defined cycle",
+          "probability": 0.32
+        },
+        {
+          "id": "CPS234_3__element_ai_specific",
+          "key": "ai_specific",
+          "requirement": "AI-specific risks are included in the assessment",
+          "probability": 0.9
+        },
+        {
+          "id": "CPS234_3__element_drives_treatment",
+          "key": "drives_treatment",
+          "requirement": "assessment results drive documented treatment decisions",
+          "probability": 0.2
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_3__element_drives_treatment",
+      "weakestElementProbability": 0.2,
+      "maturity": 2.64,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.65,
+      "routingReason": "combined 0.20 at or below fail threshold 0.2; weakest element drives_treatment at 0.20",
+      "assertionIds": [
+        "CPS234_3__evidence_supplied",
+        "CPS234_3__element_cyclical",
+        "CPS234_3__element_ai_specific",
+        "CPS234_3__element_drives_treatment",
+        "CPS234_3__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS234_4",
+      "name": "Control Implementation",
+      "framework": "APRA CPS 234",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.93,
+      "controlMet": 0.64,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_4__element_proportionate",
+          "key": "proportionate",
+          "requirement": "controls are implemented in proportion to the assessed risk",
+          "probability": 0.64
+        },
+        {
+          "id": "CPS234_4__element_evidenced",
+          "key": "evidenced",
+          "requirement": "control implementation is evidenced by configuration or operation records rather than assertion alone",
+          "probability": 0.94
+        },
+        {
+          "id": "CPS234_4__element_exceptions",
+          "key": "exceptions",
+          "requirement": "control exceptions are documented and approved",
+          "probability": 0.87
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_4__element_proportionate",
+      "weakestElementProbability": 0.64,
+      "maturity": 3.07,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.77,
+      "routingReason": "combined 0.64 sits between fail (0.2) and pass (0.8); weakest element proportionate at 0.64",
+      "assertionIds": [
+        "CPS234_4__evidence_supplied",
+        "CPS234_4__element_proportionate",
+        "CPS234_4__element_evidenced",
+        "CPS234_4__element_exceptions",
+        "CPS234_4__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS234_5",
+      "name": "Incident Management",
+      "framework": "APRA CPS 234",
+      "verdict": "PASS",
+      "evidenceSupplied": 0.98,
+      "controlMet": 0.8,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_5__element_detected",
+          "key": "detected",
+          "requirement": "incidents are detected and recorded through a defined process",
+          "probability": 0.95
+        },
+        {
+          "id": "CPS234_5__element_escalated",
+          "key": "escalated",
+          "requirement": "incidents are escalated to a responsible function within the defined timeframe",
+          "probability": 0.8
+        },
+        {
+          "id": "CPS234_5__element_resolved",
+          "key": "resolved",
+          "requirement": "incidents are resolved with a retained record of root cause and remediation",
+          "probability": 0.87
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_5__element_escalated",
+      "weakestElementProbability": 0.8,
+      "maturity": 2.81,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.62,
+      "routingReason": "all elements at or above combined 0.80 against pass threshold 0.8",
+      "assertionIds": [
+        "CPS234_5__evidence_supplied",
+        "CPS234_5__element_detected",
+        "CPS234_5__element_escalated",
+        "CPS234_5__element_resolved",
+        "CPS234_5__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS234_6",
+      "name": "Testing",
+      "framework": "APRA CPS 234",
+      "verdict": "PASS",
+      "evidenceSupplied": 0.97,
+      "controlMet": 0.83,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_6__element_cyclical",
+          "key": "cyclical",
+          "requirement": "control effectiveness testing is performed on a defined cycle",
+          "probability": 0.95
+        },
+        {
+          "id": "CPS234_6__element_coverage",
+          "key": "coverage",
+          "requirement": "testing covers the controls in scope for the period",
+          "probability": 0.88
+        },
+        {
+          "id": "CPS234_6__element_feedback",
+          "key": "feedback",
+          "requirement": "testing results feed back into the control environment, with remediation tracked",
+          "probability": 0.83
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_6__element_feedback",
+      "weakestElementProbability": 0.83,
+      "maturity": 3.61,
+      "maturityLabel": "Managed: measured, tested for effectiveness, and independently assured",
+      "confidence": 0.67,
+      "routingReason": "all elements at or above combined 0.83 against pass threshold 0.8",
+      "assertionIds": [
+        "CPS234_6__evidence_supplied",
+        "CPS234_6__element_cyclical",
+        "CPS234_6__element_coverage",
+        "CPS234_6__element_feedback",
+        "CPS234_6__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS234_7",
+      "name": "Internal Audit",
+      "framework": "APRA CPS 234",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.97,
+      "controlMet": 0.42,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_7__element_independent",
+          "key": "independent",
+          "requirement": "internal audit independently reviews the control environment",
+          "probability": 0.91
+        },
+        {
+          "id": "CPS234_7__element_tracked",
+          "key": "tracked",
+          "requirement": "audit findings are tracked to closure",
+          "probability": 0.42
+        },
+        {
+          "id": "CPS234_7__element_retained",
+          "key": "retained",
+          "requirement": "audit workpapers are retained",
+          "probability": 0.95
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_7__element_tracked",
+      "weakestElementProbability": 0.42,
+      "maturity": 2.96,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.57,
+      "routingReason": "combined 0.42 sits between fail (0.2) and pass (0.8); weakest element tracked at 0.42",
+      "assertionIds": [
+        "CPS234_7__evidence_supplied",
+        "CPS234_7__element_independent",
+        "CPS234_7__element_tracked",
+        "CPS234_7__element_retained",
+        "CPS234_7__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS234_8",
+      "name": "APRA Notification",
+      "framework": "APRA CPS 234",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.96,
+      "controlMet": 0.26,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_8__element_assessed",
+          "key": "assessed",
+          "requirement": "incidents are assessed against the materiality and notification threshold",
+          "probability": 0.92
+        },
+        {
+          "id": "CPS234_8__element_recorded",
+          "key": "recorded",
+          "requirement": "the notification decision itself is recorded with its rationale",
+          "probability": 0.95
+        },
+        {
+          "id": "CPS234_8__element_notified",
+          "key": "notified",
+          "requirement": "where notification is required, APRA is notified through the defined pathway",
+          "probability": 0.26
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_8__element_notified",
+      "weakestElementProbability": 0.26,
+      "maturity": 2.92,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.61,
+      "routingReason": "combined 0.26 sits between fail (0.2) and pass (0.8); weakest element notified at 0.26",
+      "assertionIds": [
+        "CPS234_8__evidence_supplied",
+        "CPS234_8__element_assessed",
+        "CPS234_8__element_recorded",
+        "CPS234_8__element_notified",
+        "CPS234_8__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS234_9",
+      "name": "Third Party Risk",
+      "framework": "APRA CPS 234",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.93,
+      "controlMet": 0.72,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS234_9__element_identified",
+          "key": "identified",
+          "requirement": "information security risks arising from third parties are identified and assessed",
+          "probability": 0.92
+        },
+        {
+          "id": "CPS234_9__element_ai_providers",
+          "key": "ai_providers",
+          "requirement": "AI model and infrastructure providers are included in third-party risk assessment",
+          "probability": 0.93
+        },
+        {
+          "id": "CPS234_9__element_monitored",
+          "key": "monitored",
+          "requirement": "third-party information security risk is monitored on an ongoing basis",
+          "probability": 0.72
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS234_9__element_monitored",
+      "weakestElementProbability": 0.72,
+      "maturity": 2.96,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.93,
+      "routingReason": "combined 0.72 sits between fail (0.2) and pass (0.8); weakest element monitored at 0.72",
+      "assertionIds": [
+        "CPS234_9__evidence_supplied",
+        "CPS234_9__element_identified",
+        "CPS234_9__element_ai_providers",
+        "CPS234_9__element_monitored",
+        "CPS234_9__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS230_1",
+      "name": "Operational Risk Management",
+      "framework": "APRA CPS 230",
+      "verdict": "PASS",
+      "evidenceSupplied": 0.95,
+      "controlMet": 0.85,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS230_1__element_framework",
+          "key": "framework",
+          "requirement": "an operational risk management framework covers critical operations",
+          "probability": 0.85
+        },
+        {
+          "id": "CPS230_1__element_identified",
+          "key": "identified",
+          "requirement": "AI-dependent operations are identified as critical operations",
+          "probability": 0.88
+        },
+        {
+          "id": "CPS230_1__element_monitored",
+          "key": "monitored",
+          "requirement": "operational risk indicators for those operations are monitored",
+          "probability": 0.88
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS230_1__element_framework",
+      "weakestElementProbability": 0.85,
+      "maturity": 3.04,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.85,
+      "routingReason": "all elements at or above combined 0.85 against pass threshold 0.8",
+      "assertionIds": [
+        "CPS230_1__evidence_supplied",
+        "CPS230_1__element_framework",
+        "CPS230_1__element_identified",
+        "CPS230_1__element_monitored",
+        "CPS230_1__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS230_2",
+      "name": "Business Continuity",
+      "framework": "APRA CPS 230",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.95,
+      "controlMet": 0.57,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS230_2__element_documented",
+          "key": "documented",
+          "requirement": "business continuity arrangements for critical operations are documented",
+          "probability": 0.57
+        },
+        {
+          "id": "CPS230_2__element_tested",
+          "key": "tested",
+          "requirement": "continuity arrangements are tested",
+          "probability": 0.91
+        },
+        {
+          "id": "CPS230_2__element_outcomes",
+          "key": "outcomes",
+          "requirement": "test outcomes are recorded and remediation is tracked",
+          "probability": 0.66
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS230_2__element_documented",
+      "weakestElementProbability": 0.57,
+      "maturity": 3.34,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.62,
+      "routingReason": "combined 0.57 sits between fail (0.2) and pass (0.8); weakest element documented at 0.57",
+      "assertionIds": [
+        "CPS230_2__evidence_supplied",
+        "CPS230_2__element_documented",
+        "CPS230_2__element_tested",
+        "CPS230_2__element_outcomes",
+        "CPS230_2__maturity"
+      ]
+    },
+    {
+      "controlId": "CPS230_3",
+      "name": "Service Provider Management",
+      "framework": "APRA CPS 230",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.89,
+      "controlMet": 0.31,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "CPS230_3__element_registered",
+          "key": "registered",
+          "requirement": "service provider arrangements are registered",
+          "probability": 0.92
+        },
+        {
+          "id": "CPS230_3__element_assessed",
+          "key": "assessed",
+          "requirement": "material service providers are risk assessed",
+          "probability": 0.31
+        },
+        {
+          "id": "CPS230_3__element_disruption",
+          "key": "disruption",
+          "requirement": "service provider disruption is monitored and managed",
+          "probability": 0.91
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "CPS230_3__element_assessed",
+      "weakestElementProbability": 0.31,
+      "maturity": 2.99,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.92,
+      "routingReason": "combined 0.31 sits between fail (0.2) and pass (0.8); weakest element assessed at 0.31",
+      "assertionIds": [
+        "CPS230_3__evidence_supplied",
+        "CPS230_3__element_registered",
+        "CPS230_3__element_assessed",
+        "CPS230_3__element_disruption",
+        "CPS230_3__maturity"
+      ]
+    },
+    {
+      "controlId": "ASIC_1",
+      "name": "AI Governance",
+      "framework": "ASIC 26-092MR",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.94,
+      "controlMet": 0.39,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "ASIC_1__element_owner_named",
+          "key": "owner_named",
+          "requirement": "each AI system has a named accountable owner",
+          "probability": 0.81
+        },
+        {
+          "id": "ASIC_1__element_duties_defined",
+          "key": "duties_defined",
+          "requirement": "the responsibilities of the accountable owner are defined",
+          "probability": 0.39
+        },
+        {
+          "id": "ASIC_1__element_evidenced",
+          "key": "evidenced",
+          "requirement": "accountability is evidenced in assignment records rather than only stated in policy",
+          "probability": 0.9
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "ASIC_1__element_duties_defined",
+      "weakestElementProbability": 0.39,
+      "maturity": 2.8,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.6,
+      "routingReason": "combined 0.39 sits between fail (0.2) and pass (0.8); weakest element duties_defined at 0.39",
+      "assertionIds": [
+        "ASIC_1__evidence_supplied",
+        "ASIC_1__element_owner_named",
+        "ASIC_1__element_duties_defined",
+        "ASIC_1__element_evidenced",
+        "ASIC_1__maturity"
+      ]
+    },
+    {
+      "controlId": "ASIC_2",
+      "name": "Explainability",
+      "framework": "ASIC 26-092MR",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.96,
+      "controlMet": 0.3,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "ASIC_2__element_reviewer",
+          "key": "reviewer",
+          "requirement": "AI-supported decisions can be explained to a reviewer",
+          "probability": 0.91
+        },
+        {
+          "id": "ASIC_2__element_operated",
+          "key": "operated",
+          "requirement": "explanation capability is evidenced in operation for live decisions",
+          "probability": 0.39
+        },
+        {
+          "id": "ASIC_2__element_consumer",
+          "key": "consumer",
+          "requirement": "an explanation is available to an affected person on request",
+          "probability": 0.3
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "ASIC_2__element_consumer",
+      "weakestElementProbability": 0.3,
+      "maturity": 2.14,
+      "maturityLabel": "Developing: some documented artefacts exist and material gaps remain",
+      "confidence": 0.86,
+      "routingReason": "combined 0.30 sits between fail (0.2) and pass (0.8); weakest element consumer at 0.30",
+      "assertionIds": [
+        "ASIC_2__evidence_supplied",
+        "ASIC_2__element_reviewer",
+        "ASIC_2__element_operated",
+        "ASIC_2__element_consumer",
+        "ASIC_2__maturity"
+      ]
+    },
+    {
+      "controlId": "ASIC_3",
+      "name": "Bias Testing",
+      "framework": "ASIC 26-092MR",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.95,
+      "controlMet": 0.22,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "ASIC_3__element_cyclical",
+          "key": "cyclical",
+          "requirement": "AI systems are tested for unfair bias on a defined cycle",
+          "probability": 0.7
+        },
+        {
+          "id": "ASIC_3__element_recorded",
+          "key": "recorded",
+          "requirement": "bias test results are recorded with the metrics used",
+          "probability": 0.94
+        },
+        {
+          "id": "ASIC_3__element_acted",
+          "key": "acted",
+          "requirement": "results outside tolerance trigger documented action",
+          "probability": 0.22
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "ASIC_3__element_acted",
+      "weakestElementProbability": 0.22,
+      "maturity": 3,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.94,
+      "routingReason": "combined 0.22 sits between fail (0.2) and pass (0.8); weakest element acted at 0.22",
+      "assertionIds": [
+        "ASIC_3__evidence_supplied",
+        "ASIC_3__element_cyclical",
+        "ASIC_3__element_recorded",
+        "ASIC_3__element_acted",
+        "ASIC_3__maturity"
+      ]
+    },
+    {
+      "controlId": "ASIC_4",
+      "name": "Data Quality",
+      "framework": "ASIC 26-092MR",
+      "verdict": "PASS",
+      "evidenceSupplied": 0.95,
+      "controlMet": 0.87,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "ASIC_4__element_assessed",
+          "key": "assessed",
+          "requirement": "data used to train or operate AI is assessed as fit for purpose",
+          "probability": 0.92
+        },
+        {
+          "id": "ASIC_4__element_monitored",
+          "key": "monitored",
+          "requirement": "data quality is monitored on an ongoing basis",
+          "probability": 0.87
+        },
+        {
+          "id": "ASIC_4__element_excluded",
+          "key": "excluded",
+          "requirement": "datasets failing quality gates are excluded from use or remediated",
+          "probability": 0.93
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "ASIC_4__element_monitored",
+      "weakestElementProbability": 0.87,
+      "maturity": 3.01,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.9,
+      "routingReason": "all elements at or above combined 0.87 against pass threshold 0.8",
+      "assertionIds": [
+        "ASIC_4__evidence_supplied",
+        "ASIC_4__element_assessed",
+        "ASIC_4__element_monitored",
+        "ASIC_4__element_excluded",
+        "ASIC_4__maturity"
+      ]
+    },
+    {
+      "controlId": "ASIC_5",
+      "name": "Consumer Protection",
+      "framework": "ASIC 26-092MR",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.91,
+      "controlMet": 0.4,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "ASIC_5__element_prevent",
+          "key": "prevent",
+          "requirement": "controls exist to prevent AI systems causing consumer harm",
+          "probability": 0.93
+        },
+        {
+          "id": "ASIC_5__element_detect",
+          "key": "detect",
+          "requirement": "harm events are detected and recorded",
+          "probability": 0.4
+        },
+        {
+          "id": "ASIC_5__element_remediate",
+          "key": "remediate",
+          "requirement": "harm is remediated with a retained record of what was done",
+          "probability": 0.42
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "ASIC_5__element_detect",
+      "weakestElementProbability": 0.4,
+      "maturity": 3.08,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.92,
+      "routingReason": "combined 0.40 sits between fail (0.2) and pass (0.8); weakest element detect at 0.40",
+      "assertionIds": [
+        "ASIC_5__evidence_supplied",
+        "ASIC_5__element_prevent",
+        "ASIC_5__element_detect",
+        "ASIC_5__element_remediate",
+        "ASIC_5__maturity"
+      ]
+    },
+    {
+      "controlId": "AI_1",
+      "name": "AI expectation 1",
+      "framework": "APRA AI Letter 2026",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.92,
+      "controlMet": 0.72,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "AI_1__element_approved",
+          "key": "approved",
+          "requirement": "models are approved through a defined process before production use",
+          "probability": 0.89
+        },
+        {
+          "id": "AI_1__element_validated",
+          "key": "validated",
+          "requirement": "models are independently validated in proportion to risk",
+          "probability": 0.72
+        },
+        {
+          "id": "AI_1__element_monitored",
+          "key": "monitored",
+          "requirement": "models are monitored in production for drift and performance",
+          "probability": 0.72
+        },
+        {
+          "id": "AI_1__element_retired",
+          "key": "retired",
+          "requirement": "model retirement is planned and recorded",
+          "probability": 0.92
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "AI_1__element_validated",
+      "weakestElementProbability": 0.72,
+      "maturity": 3.42,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.52,
+      "routingReason": "combined 0.72 sits between fail (0.2) and pass (0.8); weakest element validated at 0.72",
+      "assertionIds": [
+        "AI_1__evidence_supplied",
+        "AI_1__element_approved",
+        "AI_1__element_validated",
+        "AI_1__element_monitored",
+        "AI_1__element_retired",
+        "AI_1__maturity"
+      ]
+    },
+    {
+      "controlId": "AI_2",
+      "name": "AI expectation 2",
+      "framework": "APRA AI Letter 2026",
+      "verdict": "PASS",
+      "evidenceSupplied": 0.91,
+      "controlMet": 0.85,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "AI_2__element_defined",
+          "key": "defined",
+          "requirement": "data governance for AI training and input data is defined",
+          "probability": 0.85
+        },
+        {
+          "id": "AI_2__element_provenance",
+          "key": "provenance",
+          "requirement": "data provenance and lineage are recorded",
+          "probability": 0.89
+        },
+        {
+          "id": "AI_2__element_protected",
+          "key": "protected",
+          "requirement": "sensitive data used by AI is classified and protected",
+          "probability": 0.94
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "AI_2__element_defined",
+      "weakestElementProbability": 0.85,
+      "maturity": 2.89,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.82,
+      "routingReason": "all elements at or above combined 0.85 against pass threshold 0.8",
+      "assertionIds": [
+        "AI_2__evidence_supplied",
+        "AI_2__element_defined",
+        "AI_2__element_provenance",
+        "AI_2__element_protected",
+        "AI_2__maturity"
+      ]
+    },
+    {
+      "controlId": "AI_3",
+      "name": "AI expectation 3",
+      "framework": "APRA AI Letter 2026",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.86,
+      "controlMet": 0.76,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "AI_3__element_diligence",
+          "key": "diligence",
+          "requirement": "third-party AI models and services are subject to due diligence before use",
+          "probability": 0.76
+        },
+        {
+          "id": "AI_3__element_pinned",
+          "key": "pinned",
+          "requirement": "third-party model versions are pinned and changes are controlled",
+          "probability": 0.82
+        },
+        {
+          "id": "AI_3__element_oversight",
+          "key": "oversight",
+          "requirement": "ongoing oversight of third-party AI is performed",
+          "probability": 0.9
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 2,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "AI_3__element_diligence",
+      "weakestElementProbability": 0.76,
+      "maturity": 2.89,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.87,
+      "routingReason": "combined 0.76 sits between fail (0.2) and pass (0.8); weakest element diligence at 0.76",
+      "assertionIds": [
+        "AI_3__evidence_supplied",
+        "AI_3__element_diligence",
+        "AI_3__element_pinned",
+        "AI_3__element_oversight",
+        "AI_3__maturity"
+      ]
+    },
+    {
+      "controlId": "AI_4",
+      "name": "AI expectation 4",
+      "framework": "APRA AI Letter 2026",
+      "verdict": "PASS",
+      "evidenceSupplied": 0.95,
+      "controlMet": 0.92,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "AI_4__element_detection",
+          "key": "detection",
+          "requirement": "AI-specific threats are covered by detection controls",
+          "probability": 0.93
+        },
+        {
+          "id": "AI_4__element_adversarial",
+          "key": "adversarial",
+          "requirement": "adversarial input such as prompt injection is defended against at the AI boundary",
+          "probability": 0.94
+        },
+        {
+          "id": "AI_4__element_vuln_mgmt",
+          "key": "vuln_mgmt",
+          "requirement": "AI inference infrastructure is included in vulnerability management",
+          "probability": 0.92
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "AI_4__element_vuln_mgmt",
+      "weakestElementProbability": 0.92,
+      "maturity": 3.7,
+      "maturityLabel": "Managed: measured, tested for effectiveness, and independently assured",
+      "confidence": 0.75,
+      "routingReason": "all elements at or above combined 0.92 against pass threshold 0.8",
+      "assertionIds": [
+        "AI_4__evidence_supplied",
+        "AI_4__element_detection",
+        "AI_4__element_adversarial",
+        "AI_4__element_vuln_mgmt",
+        "AI_4__maturity"
+      ]
+    },
+    {
+      "controlId": "AI_5",
+      "name": "AI expectation 5",
+      "framework": "APRA AI Letter 2026",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.94,
+      "controlMet": 0.49,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "AI_5__element_designed",
+          "key": "designed",
+          "requirement": "a human oversight step is designed into the AI decisions that require it",
+          "probability": 0.95
+        },
+        {
+          "id": "AI_5__element_operated",
+          "key": "operated",
+          "requirement": "the oversight step is actually operated, with reviews occurring",
+          "probability": 0.95
+        },
+        {
+          "id": "AI_5__element_overrides",
+          "key": "overrides",
+          "requirement": "overrides and their rationale are recorded",
+          "probability": 0.49
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "AI_5__element_overrides",
+      "weakestElementProbability": 0.49,
+      "maturity": 3.23,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.81,
+      "routingReason": "combined 0.49 sits between fail (0.2) and pass (0.8); weakest element overrides at 0.49",
+      "assertionIds": [
+        "AI_5__evidence_supplied",
+        "AI_5__element_designed",
+        "AI_5__element_operated",
+        "AI_5__element_overrides",
+        "AI_5__maturity"
+      ]
+    },
+    {
+      "controlId": "AI_6",
+      "name": "AI expectation 6",
+      "framework": "APRA AI Letter 2026",
+      "verdict": "ESCALATE",
+      "evidenceSupplied": 0.92,
+      "controlMet": 0.55,
+      "combineRule": "all",
+      "elements": [
+        {
+          "id": "AI_6__element_monitored",
+          "key": "monitored",
+          "requirement": "AI risk is monitored continuously",
+          "probability": 0.55
+        },
+        {
+          "id": "AI_6__element_reported",
+          "key": "reported",
+          "requirement": "AI risk is reported to the board on a defined cycle",
+          "probability": 0.95
+        },
+        {
+          "id": "AI_6__element_evidenced",
+          "key": "evidenced",
+          "requirement": "the reporting is evidenced by delivered artefacts rather than a stated intention",
+          "probability": 0.92
+        }
+      ],
+      "windowCoverage": {
+        "inWindow": 3,
+        "outsideWindow": 0,
+        "undated": 0
+      },
+      "weakestElementId": "AI_6__element_monitored",
+      "weakestElementProbability": 0.55,
+      "maturity": 3.08,
+      "maturityLabel": "Defined: documented, consistently applied, and periodically reviewed",
+      "confidence": 0.93,
+      "routingReason": "combined 0.55 sits between fail (0.2) and pass (0.8); weakest element monitored at 0.55",
+      "assertionIds": [
+        "AI_6__evidence_supplied",
+        "AI_6__element_monitored",
+        "AI_6__element_reported",
+        "AI_6__element_evidenced",
+        "AI_6__maturity"
+      ]
+    }
+  ]
+}

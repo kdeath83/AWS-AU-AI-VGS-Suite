@@ -1,0 +1,18 @@
+{
+  "packName": "AI platform control environment \u2014 no evidence supplied",
+  "institution": {
+    "name": "Meridian Mutual Bank (synthetic)",
+    "size": "mid-tier authorised deposit-taking institution",
+    "assessmentWindow": {
+      "from": "2026-04-01",
+      "to": "2026-09-20"
+    },
+    "frameworksInScope": [
+      "APRA CPS 234",
+      "APRA CPS 230",
+      "ASIC 26-092MR",
+      "APRA AI Letter 2026"
+    ]
+  },
+  "records": []
+}

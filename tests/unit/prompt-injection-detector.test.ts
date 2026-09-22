@@ -4,19 +4,10 @@
  */
 
 import { handler } from '../../src/lambda/secure/prompt-injection-detector';
-import { APIGatewayProxyEvent, Context } from 'aws-lambda';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { createMockContext } from '../helpers/mock-context';
 
-const mockContext: Context = {
-  awsRequestId: 'test-request-id',
-  functionName: 'test-function',
-  memoryLimitInMB: '256',
-  functionVersion: '1',
-  invokedFunctionArn: 'arn:aws:lambda:ap-southeast-2:123456789012:function:test',
-  getRemainingTimeInMillis: () => 30000,
-  done: () => {},
-  fail: () => {},
-  succeed: () => {},
-};
+const mockContext = createMockContext();
 
 function createApiEvent(body: Record<string, unknown>): APIGatewayProxyEvent {
   return {

@@ -18,6 +18,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as config from 'aws-cdk-lib/aws-config';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
@@ -43,6 +44,17 @@ export class SecureStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: SecureStackProps) {
     super(scope, id, props);
+
+    // The shared execution role is created in SharedStack. Import it by ARN with
+    // addGrantsToResources so grants in this stack become resource policies on the local
+    // resource, rather than statements written into the role's policy — a resource that
+    // lives in SharedStack. Writing this stack's resource ARNs into a SharedStack policy
+    // would make SharedStack depend on this stack, and since this stack already depends on
+    // SharedStack, CDK reports a dependency cycle and refuses to synthesize.
+    const baseRole = iam.Role.fromRoleArn(this, 'BaseRoleRef', props.baseRole.roleArn, {
+      mutable: false,
+      addGrantsToResources: true,
+    });
 
     // ── Bedrock Guardrails ──────────────────────────────────────────────────
     // FSI-specific guardrails: topic restrictions, PII redaction, content filters.
@@ -199,14 +211,14 @@ export class SecureStack extends cdk.Stack {
                 name: `${PROJECT_NAME}-prompt-injection-patterns`,
                 scope: 'REGIONAL',
                 description: 'Regex patterns for common prompt injection and jailbreak attempts',
-                regularExpressions: [
-                  { regexString: '(?i)(ignore previous|ignore all|disregard|forget previous)' },
-                  { regexString: '(?i)(new instruction|system prompt|developer mode)' },
-                  { regexString: '(?i)(DAN|do anything now|jailbreak|root access)' },
-                  { regexString: '(?i)(ignore your|override your|bypass your|you are now)' },
-                  { regexString: '(?i)(output initialization|above instructions|previous constraints)' },
-                  { regexString: '(?i)(translate to.*exec|convert to.*bash|convert to.*python)' },
-                  { regexString: '(?i)( Base64: | base64 encoded | decode this )' },
+                regularExpressionList: [
+                  '(?i)(ignore previous|ignore all|disregard|forget previous)',
+                  '(?i)(new instruction|system prompt|developer mode)',
+                  '(?i)(DAN|do anything now|jailbreak|root access)',
+                  '(?i)(ignore your|override your|bypass your|you are now)',
+                  '(?i)(output initialization|above instructions|previous constraints)',
+                  '(?i)(translate|convert)\\s+(?:\\w+\\s+){0,3}to\\s+(bash|python|shell|exec|powershell)',
+                  '(?i)( Base64: | base64 encoded | decode this )',
                 ],
               }).attrArn,
               fieldToMatch: { body: { oversizeHandling: 'MATCH' } },
@@ -234,11 +246,11 @@ export class SecureStack extends cdk.Stack {
                 name: `${PROJECT_NAME}-data-exfil-patterns`,
                 scope: 'REGIONAL',
                 description: 'Regex patterns for data exfiltration attempts',
-                regularExpressions: [
-                  { regexString: '(?i)(send.*to.*email|exfiltrate|extract.*data|dump.*database)' },
-                  { regexString: '(?i)(bearer\s+[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)' },
-                  { regexString: '(?i)(api[_-]?key\s*[:=]\s*[a-zA-Z0-9]{20,})' },
-                  { regexString: '(?i)(aws_access_key_id\s*[:=]\s*AKIA)' },
+                regularExpressionList: [
+                  '(?i)(send.*to.*email|exfiltrate|extract.*data|dump.*database)',
+                  '(?i)(bearer\s+[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)',
+                  '(?i)(api[_-]?key\s*[:=]\s*[a-zA-Z0-9]{20,})',
+                  '(?i)(aws_access_key_id\s*[:=]\s*AKIA)',
                 ],
               }).attrArn,
               fieldToMatch: { body: { oversizeHandling: 'MATCH' } },
@@ -318,7 +330,7 @@ export class SecureStack extends cdk.Stack {
         s3Logs: { enable: true },
         kubernetes: { auditLogs: { enable: true } },
         malwareProtection: {
-          scanEc2InstanceWithFindings: { ebsVolumes: { enable: true } },
+          scanEc2InstanceWithFindings: { ebsVolumes: true },
         },
       },
     });
@@ -330,6 +342,7 @@ export class SecureStack extends cdk.Stack {
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 3,
         queue: new sqs.Queue(this, 'GuardDutyFindingsDLQ', {
@@ -337,6 +350,7 @@ export class SecureStack extends cdk.Stack {
           retentionPeriod: cdk.Duration.days(14),
           encryption: sqs.QueueEncryption.KMS,
           encryptionMasterKey: props.kmsKey,
+          enforceSSL: true,
         }),
       },
     });
@@ -372,6 +386,7 @@ export class SecureStack extends cdk.Stack {
       retentionPeriod: cdk.Duration.days(14),
       encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: props.kmsKey,
+      enforceSSL: true,
       deadLetterQueue: {
         maxReceiveCount: 3,
         queue: new sqs.Queue(this, 'InspectorFindingsDLQ', {
@@ -379,6 +394,7 @@ export class SecureStack extends cdk.Stack {
           retentionPeriod: cdk.Duration.days(14),
           encryption: sqs.QueueEncryption.KMS,
           encryptionMasterKey: props.kmsKey,
+          enforceSSL: true,
         }),
       },
     });
@@ -475,6 +491,8 @@ export class SecureStack extends cdk.Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.KMS,
       encryptionKey: props.kmsKey,
+      enforceSSL: true,
+      versioned: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
@@ -620,9 +638,10 @@ export class SecureStack extends cdk.Stack {
           - AWS::KMS::Key
 `;
 
-    new s3.CfnBucket(this, 'ConformancePackTemplate', {
-      bucket: conformancePackBucket.bucketName,
-    });
+    // NOTE: a spurious `new s3.CfnBucket(this, 'ConformancePackTemplate', { bucket: ... })`
+    // used to sit here. It provisioned an unintended duplicate bucket, and `bucket` is not
+    // a valid CfnBucketProps field (the name field is `bucketName`). The conformance pack
+    // below references `conformancePackBucket` directly, so the statement was removed.
 
     new config.CfnConformancePack(this, 'ApraCps234ConformancePack', {
       conformancePackName: `apra-cps234-${props.environment}`,
@@ -649,7 +668,7 @@ export class SecureStack extends cdk.Stack {
       description: 'AI resources must have required tags (Owner, DataClassification, ModelVersion)',
       lambdaFunction: new lambda.Function(this, 'AiResourceTaggingLambda', {
         functionName: `${PROJECT_NAME}-ai-tagging-checker-${props.environment}`,
-        runtime: lambda.Runtime.NODEJS_22_X,
+        runtime: lambda.Runtime.NODEJS_24_X,
         handler: 'index.handler',
         code: lambda.Code.fromInline(`
           exports.handler = async (event) => {
@@ -674,7 +693,7 @@ export class SecureStack extends cdk.Stack {
     // ── Lambda: Prompt Injection Detector ────────────────────────────────────
     const promptInjectionDetector = new lambda.Function(this, 'PromptInjectionDetector', {
       functionName: `${PROJECT_NAME}-prompt-injection-detector-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/SECURE/prompt-injection-detector'),
       timeout: cdk.Duration.seconds(10),
@@ -687,13 +706,13 @@ export class SecureStack extends cdk.Stack {
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
     // ── Lambda: GuardDuty Findings Aggregator ────────────────────────────────
     const guarddutyAggregator = new lambda.Function(this, 'GuardDutyAggregator', {
       functionName: `${PROJECT_NAME}-guardduty-aggregator-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/SECURE/guardduty-finder-aggregator'),
       timeout: cdk.Duration.seconds(60),
@@ -705,19 +724,22 @@ export class SecureStack extends cdk.Stack {
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
-    guarddutyAggregator.addEventSource(new lambda.EventSourceMapping(this, 'GuardDutyQueueMapping', {
-      target: guarddutyAggregator,
-      eventSourceArn: guarddutyQueue.queueArn,
+    // SqsEventSource rather than a hand-built EventSourceMapping: the event source class
+    // grants the function permission to consume the queue (the raw construct did not), and
+    // reportBatchItemFailures makes the handler's `batchItemFailures` response
+    // authoritative — without it one bad record replays the entire batch.
+    guarddutyAggregator.addEventSource(new lambdaEventSources.SqsEventSource(guarddutyQueue, {
       batchSize: 10,
+      reportBatchItemFailures: true,
     }));
 
     // ── Lambda: Patch Compliance Checker ───────────────────────────────────────
     const patchComplianceChecker = new lambda.Function(this, 'PatchComplianceChecker', {
       functionName: `${PROJECT_NAME}-patch-compliance-${props.environment}`,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('src/lambda/SECURE/patch-compliance-checker'),
       timeout: cdk.Duration.seconds(60),
@@ -729,7 +751,7 @@ export class SecureStack extends cdk.Stack {
       },
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      role: props.baseRole,
+      role: baseRole,
     });
 
     // Schedule patch compliance check daily

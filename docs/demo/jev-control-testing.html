@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS VGS Suite — Continuous Control Testing with Jev</title>
+<style>
+  :root {
+    --bg: #0a0e14; --surface: #131820; --border: #1e293b; --text: #e2e8f0;
+    --muted: #64748b; --accent: #38bdf8; --green: #34d399; --red: #f87171;
+    --amber: #fbbf24; --purple: #a78bfa;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+         background: var(--bg); color: var(--text); line-height: 1.5; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border);
+           padding: 1rem 2rem; display:flex; justify-content:space-between; align-items:center; }
+  header h1 { font-size: 1.1rem; font-weight: 600; }
+  header h1 span { color: var(--accent); }
+  .badge { font-size: 0.7rem; background: var(--border); color: var(--muted);
+           padding: 0.25rem 0.6rem; border-radius: 4px; }
+  main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 3rem; }
+  .lead { color: var(--muted); font-size: 0.9rem; max-width: 900px; margin-bottom: 1.25rem; }
+  .lead b { color: var(--text); font-weight: 600; }
+  .stats { display:grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; }
+  .stat b { display:block; font-size: 1.35rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  .tabs { display:flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .tab { background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+         padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-family: inherit; }
+  .tab.active { border-color: var(--accent); color: var(--text); }
+  .cards { display:grid; grid-template-columns: 1.55fr 1fr; gap: 1.5rem; align-items:start; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+  .card h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;
+             color: var(--muted); margin-bottom: 0.9rem; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+  th { text-align:left; color: var(--muted); font-weight: 500; font-size: 0.7rem;
+       text-transform: uppercase; letter-spacing: 0.05em; padding: 0.35rem 0.5rem 0.35rem 0;
+       border-bottom: 1px solid var(--border); }
+  td { padding: 0.36rem 0.5rem 0.36rem 0; border-bottom: 1px solid rgba(30,41,59,0.5); }
+  td.n { text-align: right; }
+  .v { font-weight: 650; font-size: 0.72rem; letter-spacing: 0.03em; }
+  .PASS { color: var(--green); } .FAIL { color: var(--red); }
+  .ESCALATE { color: var(--amber); } .INSUFFICIENT_EVIDENCE { color: var(--purple); }
+  .bar { height: 5px; background: var(--border); border-radius: 3px; overflow:hidden; min-width: 46px; }
+  .bar i { display:block; height:100%; background: var(--accent); }
+  .finding { border-left: 2px solid var(--amber); padding: 0.4rem 0 0.4rem 0.65rem; margin-bottom: 0.7rem; }
+  .finding.fail { border-left-color: var(--red); }
+  .finding .id { font-size: 0.78rem; font-weight: 600; }
+  .finding .req { color: var(--muted); font-size: 0.78rem; }
+  .finding .p { font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .slider { width: 100%; margin: 0.5rem 0 0.25rem; accent-color: var(--accent); }
+  .row { display:flex; justify-content:space-between; font-size: 0.82rem; padding: 0.3rem 0;
+         border-bottom: 1px solid rgba(30,41,59,0.5); }
+  .row span:last-child { font-variant-numeric: tabular-nums; }
+  .moved { color: var(--accent); }
+  .note { color: var(--muted); font-size: 0.78rem; margin-top: 0.9rem; }
+  .pills { display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.75rem; }
+  .pill { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 4px;
+          background: var(--border); color: var(--muted); }
+  footer { color: var(--muted); font-size: 0.78rem; max-width: 1400px; margin: 0 auto; padding: 0 2rem 3rem; }
+  code { background: var(--border); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
+  @media (max-width: 1000px) { .cards { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>AWS AU AI VGS Suite — <span>Continuous Control Testing</span></h1>
+  <div class="badge" id="modelbadge"></div>
+</header>
+<main>
+  <p class="lead">
+    Every control in the suite, evaluated against a real evidence pack in <b>one API call</b>.
+    Jev returns typed judgements and probabilities in parallel; ordinary code decides what passes,
+    fails, or reaches a human. The finding text is written by us, in the assertion library — the
+    model returns numbers, not prose.
+  </p>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="cards">
+    <div class="card">
+      <h2>Control verdicts</h2>
+      <table>
+        <thead><tr>
+          <th>Control</th><th>Framework</th><th class="n">Evid</th><th class="n">Met</th>
+          <th class="n">Mat</th><th class="n">Conf</th><th>Verdict</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:1.5rem">
+        <h2>Where the evidence is thin</h2>
+        <div id="findings"></div>
+        <div class="note" id="findnote"></div>
+      </div>
+
+      <div class="card">
+        <h2>Re-policy without re-inference</h2>
+        <p class="note" style="margin:0 0 0.5rem">
+          Probabilities are already paid for. Moving the pass mark changes verdicts at zero
+          additional cost — the same deterministic rule the CLI applies in <code>--replay</code>.
+        </p>
+        <div class="row"><span>pass mark</span><span id="passval"></span></div>
+        <input class="slider" type="range" id="passmk" min="30" max="95" value="80">
+        <div class="row"><span>PASS</span><span id="rp"></span></div>
+        <div class="row"><span>ESCALATE</span><span id="re"></span></div>
+        <div class="row"><span>FAIL</span><span id="rf"></span></div>
+        <div class="row"><span>no evidence</span><span id="rn"></span></div>
+        <div class="row"><span>verdicts moved from default</span><span id="rm" class="moved"></span></div>
+        <div class="row"><span>additional cost</span><span>$0.000000</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer>
+  Synthetic evidence packs; live runs against <span id="footmodel"></span>.
+  Assertion library v<span id="footlib"></span> · <span id="footassert"></span> assertions across
+  23 controls, evaluated in a single request. Source and methodology:
+  <code>docs/jev-control-testing.md</code>.
+</footer>
+<script>
+const DATA = {"head": {"libraryVersion": "2.0.0", "model": "jev-1.13.0", "assertionCount": 117, "thresholds": {"evidenceFloor": 0.5, "passAt": 0.8, "failAt": 0.2, "confidenceFloor": 0.45}}, "packs": {"strong": {"label": "AI platform control environment \u2014 full evidence pack", "records": 60, "summary": {"pass": 6, "fail": 2, "escalate": 15, "insufficientEvidence": 0, "meanMaturity": 3.016, "elementCount": 71, "elementsBelowPass": 27}, "cost": 0.001233, "serverMs": 305, "wallMs": 1381, "tokens": 29369, "controls": [{"id": "CPS234_1", "name": "Information Security Policy", "framework": "APRA CPS 234", "verdict": "FAIL", "ev": 0.94, "met": 0.14, "mat": 2.97, "conf": 0.87, "wk": "owned", "wkr": "the framework names an accountable owner", "wkp": 0.14}, {"id": "CPS234_2", "name": "Information Asset Classification", "framework": "APRA CPS 234", "verdict": "ESCALATE", "ev": 0.93, "met": 0.53, "mat": 2.81, "conf": 0.75, "wk": "handling", "wkr": "handling requirements follow the assigned classification in practice", "wkp": 0.53}, {"id": "CPS234_3", "name": "Risk Assessment", "framework": "APRA CPS 234", "verdict": "FAIL", "ev": 0.95, "met": 0.2, "mat": 2.64, "conf": 0.65, "wk": "drives_treatment", "wkr": "assessment results drive documented treatment decisions", "wkp": 0.2}, {"id": "CPS234_4", "name": "Control Implementation", "framework": "APRA CPS 234", "verdict": "ESCALATE", "ev": 0.93, "met": 0.64, "mat": 3.07, "conf": 0.77, "wk": "proportionate", "wkr": "controls are implemented in proportion to the assessed risk", "wkp": 0.64}, {"id": "CPS234_5", "name": "Incident Management", "framework": "APRA CPS 234", "verdict": "PASS", "ev": 0.98, "met": 0.8, "mat": 2.81, "conf": 0.62, "wk": "escalated", "wkr": "incidents are escalated to a responsible function within the defined timeframe", "wkp": 0.8}, {"id": "CPS234_6", "name": "Testing", "framework": "APRA CPS 234", "verdict": "PASS", "ev": 0.97, "met": 0.83, "mat": 3.61, "conf": 0.67, "wk": "feedback", "wkr": "testing results feed back into the control environment, with remediation tracked", "wkp": 0.83}, {"id": "CPS234_7", "name": "Internal Audit", "framework": "APRA CPS 234", "verdict": "ESCALATE", "ev": 0.97, "met": 0.42, "mat": 2.96, "conf": 0.57, "wk": "tracked", "wkr": "audit findings are tracked to closure", "wkp": 0.42}, {"id": "CPS234_8", "name": "APRA Notification", "framework": "APRA CPS 234", "verdict": "ESCALATE", "ev": 0.96, "met": 0.26, "mat": 2.92, "conf": 0.61, "wk": "notified", "wkr": "where notification is required, APRA is notified through the defined pathway", "wkp": 0.26}, {"id": "CPS234_9", "name": "Third Party Risk", "framework": "APRA CPS 234", "verdict": "ESCALATE", "ev": 0.93, "met": 0.72, "mat": 2.96, "conf": 0.93, "wk": "monitored", "wkr": "third-party information security risk is monitored on an ongoing basis", "wkp": 0.72}, {"id": "CPS230_1", "name": "Operational Risk Management", "framework": "APRA CPS 230", "verdict": "PASS", "ev": 0.95, "met": 0.85, "mat": 3.04, "conf": 0.85, "wk": "framework", "wkr": "an operational risk management framework covers critical operations", "wkp": 0.85}, {"id": "CPS230_2", "name": "Business Continuity", "framework": "APRA CPS 230", "verdict": "ESCALATE", "ev": 0.95, "met": 0.57, "mat": 3.34, "conf": 0.62, "wk": "documented", "wkr": "business continuity arrangements for critical operations are documented", "wkp": 0.57}, {"id": "CPS230_3", "name": "Service Provider Management", "framework": "APRA CPS 230", "verdict": "ESCALATE", "ev": 0.89, "met": 0.31, "mat": 2.99, "conf": 0.92, "wk": "assessed", "wkr": "material service providers are risk assessed", "wkp": 0.31}, {"id": "ASIC_1", "name": "AI Governance", "framework": "ASIC 26-092MR", "verdict": "ESCALATE", "ev": 0.94, "met": 0.39, "mat": 2.8, "conf": 0.6, "wk": "duties_defined", "wkr": "the responsibilities of the accountable owner are defined", "wkp": 0.39}, {"id": "ASIC_2", "name": "Explainability", "framework": "ASIC 26-092MR", "verdict": "ESCALATE", "ev": 0.96, "met": 0.3, "mat": 2.14, "conf": 0.86, "wk": "consumer", "wkr": "an explanation is available to an affected person on request", "wkp": 0.3}, {"id": "ASIC_3", "name": "Bias Testing", "framework": "ASIC 26-092MR", "verdict": "ESCALATE", "ev": 0.95, "met": 0.22, "mat": 3, "conf": 0.94, "wk": "acted", "wkr": "results outside tolerance trigger documented action", "wkp": 0.22}, {"id": "ASIC_4", "name": "Data Quality", "framework": "ASIC 26-092MR", "verdict": "PASS", "ev": 0.95, "met": 0.87, "mat": 3.01, "conf": 0.9, "wk": "monitored", "wkr": "data quality is monitored on an ongoing basis", "wkp": 0.87}, {"id": "ASIC_5", "name": "Consumer Protection", "framework": "ASIC 26-092MR", "verdict": "ESCALATE", "ev": 0.91, "met": 0.4, "mat": 3.08, "conf": 0.92, "wk": "detect", "wkr": "harm events are detected and recorded", "wkp": 0.4}, {"id": "AI_1", "name": "AI expectation 1", "framework": "APRA AI Letter 2026", "verdict": "ESCALATE", "ev": 0.92, "met": 0.72, "mat": 3.42, "conf": 0.52, "wk": "validated", "wkr": "models are independently validated in proportion to risk", "wkp": 0.72}, {"id": "AI_2", "name": "AI expectation 2", "framework": "APRA AI Letter 2026", "verdict": "PASS", "ev": 0.91, "met": 0.85, "mat": 2.89, "conf": 0.82, "wk": "defined", "wkr": "data governance for AI training and input data is defined", "wkp": 0.85}, {"id": "AI_3", "name": "AI expectation 3", "framework": "APRA AI Letter 2026", "verdict": "ESCALATE", "ev": 0.86, "met": 0.76, "mat": 2.89, "conf": 0.87, "wk": "diligence", "wkr": "third-party AI models and services are subject to due diligence before use", "wkp": 0.76}, {"id": "AI_4", "name": "AI expectation 4", "framework": "APRA AI Letter 2026", "verdict": "PASS", "ev": 0.95, "met": 0.92, "mat": 3.7, "conf": 0.75, "wk": "vuln_mgmt", "wkr": "AI inference infrastructure is included in vulnerability management", "wkp": 0.92}, {"id": "AI_5", "name": "AI expectation 5", "framework": "APRA AI Letter 2026", "verdict": "ESCALATE", "ev": 0.94, "met": 0.49, "mat": 3.23, "conf": 0.81, "wk": "overrides", "wkr": "overrides and their rationale are recorded", "wkp": 0.49}, {"id": "AI_6", "name": "AI expectation 6", "framework": "APRA AI Letter 2026", "verdict": "ESCALATE", "ev": 0.92, "met": 0.55, "mat": 3.08, "conf": 0.93, "wk": "monitored", "wkr": "AI risk is monitored continuously", "wkp": 0.55}]}, "weak": {"label": "AI platform control environment \u2014 sparse evidence pack", "records": 9, "summary": {"pass": 0, "fail": 1, "escalate": 0, "insufficientEvidence": 22, "meanMaturity": 0.305, "elementCount": 71, "elementsBelowPass": 71}, "cost": 0.000716, "serverMs": 261, "wallMs": 1367, "tokens": 17053, "controls": [{"id": "CPS234_1", "name": "Information Security Policy", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.26, "met": 0.03, "mat": 1.65, "conf": 0.71, "wk": "approved", "wkr": "an information security policy framework is approved by the board or a delegated committee", "wkp": 0.03}, {"id": "CPS234_2", "name": "Information Asset Classification", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.11, "met": 0.07, "mat": 0.59, "conf": 0.51, "wk": "handling", "wkr": "handling requirements follow the assigned classification in practice", "wkp": 0.07}, {"id": "CPS234_3", "name": "Risk Assessment", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.09, "met": 0.03, "mat": 0.06, "conf": 0.95, "wk": "drives_treatment", "wkr": "assessment results drive documented treatment decisions", "wkp": 0.03}, {"id": "CPS234_4", "name": "Control Implementation", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "evidenced", "wkr": "control implementation is evidenced by configuration or operation records rather than assertion alone", "wkp": 0.02}, {"id": "CPS234_5", "name": "Incident Management", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "detected", "wkr": "incidents are detected and recorded through a defined process", "wkp": 0.02}, {"id": "CPS234_6", "name": "Testing", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "cyclical", "wkr": "control effectiveness testing is performed on a defined cycle", "wkp": 0.02}, {"id": "CPS234_7", "name": "Internal Audit", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "independent", "wkr": "internal audit independently reviews the control environment", "wkp": 0.02}, {"id": "CPS234_8", "name": "APRA Notification", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "assessed", "wkr": "incidents are assessed against the materiality and notification threshold", "wkp": 0.02}, {"id": "CPS234_9", "name": "Third Party Risk", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "identified", "wkr": "information security risks arising from third parties are identified and assessed", "wkp": 0.02}, {"id": "CPS230_1", "name": "Operational Risk Management", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "framework", "wkr": "an operational risk management framework covers critical operations", "wkp": 0.02}, {"id": "CPS230_2", "name": "Business Continuity", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "documented", "wkr": "business continuity arrangements for critical operations are documented", "wkp": 0.02}, {"id": "CPS230_3", "name": "Service Provider Management", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.04, "met": 0.02, "mat": 0, "conf": 1, "wk": "registered", "wkr": "service provider arrangements are registered", "wkp": 0.02}, {"id": "ASIC_1", "name": "AI Governance", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.12, "met": 0.05, "mat": 0.58, "conf": 0.52, "wk": "owner_named", "wkr": "each AI system has a named accountable owner", "wkp": 0.05}, {"id": "ASIC_2", "name": "Explainability", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "reviewer", "wkr": "AI-supported decisions can be explained to a reviewer", "wkp": 0.02}, {"id": "ASIC_3", "name": "Bias Testing", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.11, "met": 0.04, "mat": 1.51, "conf": 0.59, "wk": "acted", "wkr": "results outside tolerance trigger documented action", "wkp": 0.04}, {"id": "ASIC_4", "name": "Data Quality", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.04, "met": 0.02, "mat": 0, "conf": 1, "wk": "assessed", "wkr": "data used to train or operate AI is assessed as fit for purpose", "wkp": 0.02}, {"id": "ASIC_5", "name": "Consumer Protection", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "prevent", "wkr": "controls exist to prevent AI systems causing consumer harm", "wkp": 0.02}, {"id": "AI_1", "name": "AI expectation 1", "framework": "APRA AI Letter 2026", "verdict": "FAIL", "ev": 0.51, "met": 0.02, "mat": 1.87, "conf": 0.89, "wk": "monitored", "wkr": "models are monitored in production for drift and performance", "wkp": 0.02}, {"id": "AI_2", "name": "AI expectation 2", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "provenance", "wkr": "data provenance and lineage are recorded", "wkp": 0.02}, {"id": "AI_3", "name": "AI expectation 3", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "diligence", "wkr": "third-party AI models and services are subject to due diligence before use", "wkp": 0.02}, {"id": "AI_4", "name": "AI expectation 4", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "detection", "wkr": "AI-specific threats are covered by detection controls", "wkp": 0.02}, {"id": "AI_5", "name": "AI expectation 5", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.09, "met": 0.05, "mat": 0.76, "conf": 0.7, "wk": "overrides", "wkr": "overrides and their rationale are recorded", "wkp": 0.05}, {"id": "AI_6", "name": "AI expectation 6", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "monitored", "wkr": "AI risk is monitored continuously", "wkp": 0.02}]}, "absent": {"label": "AI platform control environment \u2014 no evidence supplied", "records": 0, "summary": {"pass": 0, "fail": 0, "escalate": 0, "insufficientEvidence": 23, "meanMaturity": 0, "elementCount": 71, "elementsBelowPass": 71}, "cost": 0.000638, "serverMs": 157, "wallMs": 2724, "tokens": 15188, "controls": [{"id": "CPS234_1", "name": "Information Security Policy", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "approved", "wkr": "an information security policy framework is approved by the board or a delegated committee", "wkp": 0.02}, {"id": "CPS234_2", "name": "Information Asset Classification", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "scheme", "wkr": "information assets are classified under a documented classification scheme", "wkp": 0.02}, {"id": "CPS234_3", "name": "Risk Assessment", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "cyclical", "wkr": "information security risks are assessed on a defined cycle", "wkp": 0.02}, {"id": "CPS234_4", "name": "Control Implementation", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "evidenced", "wkr": "control implementation is evidenced by configuration or operation records rather than assertion alone", "wkp": 0.02}, {"id": "CPS234_5", "name": "Incident Management", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "detected", "wkr": "incidents are detected and recorded through a defined process", "wkp": 0.02}, {"id": "CPS234_6", "name": "Testing", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "cyclical", "wkr": "control effectiveness testing is performed on a defined cycle", "wkp": 0.02}, {"id": "CPS234_7", "name": "Internal Audit", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "independent", "wkr": "internal audit independently reviews the control environment", "wkp": 0.02}, {"id": "CPS234_8", "name": "APRA Notification", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "notified", "wkr": "where notification is required, APRA is notified through the defined pathway", "wkp": 0.02}, {"id": "CPS234_9", "name": "Third Party Risk", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "identified", "wkr": "information security risks arising from third parties are identified and assessed", "wkp": 0.02}, {"id": "CPS230_1", "name": "Operational Risk Management", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "framework", "wkr": "an operational risk management framework covers critical operations", "wkp": 0.02}, {"id": "CPS230_2", "name": "Business Continuity", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "documented", "wkr": "business continuity arrangements for critical operations are documented", "wkp": 0.02}, {"id": "CPS230_3", "name": "Service Provider Management", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "assessed", "wkr": "material service providers are risk assessed", "wkp": 0.02}, {"id": "ASIC_1", "name": "AI Governance", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "owner_named", "wkr": "each AI system has a named accountable owner", "wkp": 0.02}, {"id": "ASIC_2", "name": "Explainability", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "reviewer", "wkr": "AI-supported decisions can be explained to a reviewer", "wkp": 0.02}, {"id": "ASIC_3", "name": "Bias Testing", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "cyclical", "wkr": "AI systems are tested for unfair bias on a defined cycle", "wkp": 0.02}, {"id": "ASIC_4", "name": "Data Quality", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "assessed", "wkr": "data used to train or operate AI is assessed as fit for purpose", "wkp": 0.02}, {"id": "ASIC_5", "name": "Consumer Protection", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "prevent", "wkr": "controls exist to prevent AI systems causing consumer harm", "wkp": 0.02}, {"id": "AI_1", "name": "AI expectation 1", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "validated", "wkr": "models are independently validated in proportion to risk", "wkp": 0.02}, {"id": "AI_2", "name": "AI expectation 2", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "protected", "wkr": "sensitive data used by AI is classified and protected", "wkp": 0.02}, {"id": "AI_3", "name": "AI expectation 3", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.03, "mat": 0, "conf": 1, "wk": "diligence", "wkr": "third-party AI models and services are subject to due diligence before use", "wkp": 0.03}, {"id": "AI_4", "name": "AI expectation 4", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "adversarial", "wkr": "adversarial input such as prompt injection is defended against at the AI boundary", "wkp": 0.02}, {"id": "AI_5", "name": "AI expectation 5", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "designed", "wkr": "a human oversight step is designed into the AI decisions that require it", "wkp": 0.02}, {"id": "AI_6", "name": "AI expectation 6", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.02, "met": 0.02, "mat": 0, "conf": 1, "wk": "monitored", "wkr": "AI risk is monitored continuously", "wkp": 0.02}]}, "self_serving": {"label": "AI platform control environment \u2014 sparse evidence plus attestations", "records": 14, "summary": {"pass": 0, "fail": 1, "escalate": 1, "insufficientEvidence": 21, "meanMaturity": 0.574, "elementCount": 71, "elementsBelowPass": 71}, "cost": 0.000764, "serverMs": 174, "wallMs": 1243, "tokens": 18195, "controls": [{"id": "CPS234_1", "name": "Information Security Policy", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.32, "met": 0.04, "mat": 1.58, "conf": 0.65, "wk": "approved", "wkr": "an information security policy framework is approved by the board or a delegated committee", "wkp": 0.04}, {"id": "CPS234_2", "name": "Information Asset Classification", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.1, "met": 0.07, "mat": 0.65, "conf": 0.46, "wk": "handling", "wkr": "handling requirements follow the assigned classification in practice", "wkp": 0.07}, {"id": "CPS234_3", "name": "Risk Assessment", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.09, "met": 0.03, "mat": 0.08, "conf": 0.94, "wk": "drives_treatment", "wkr": "assessment results drive documented treatment decisions", "wkp": 0.03}, {"id": "CPS234_4", "name": "Control Implementation", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.37, "met": 0.03, "mat": 0.6, "conf": 0.5, "wk": "evidenced", "wkr": "control implementation is evidenced by configuration or operation records rather than assertion alone", "wkp": 0.03}, {"id": "CPS234_5", "name": "Incident Management", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "detected", "wkr": "incidents are detected and recorded through a defined process", "wkp": 0.02}, {"id": "CPS234_6", "name": "Testing", "framework": "APRA CPS 234", "verdict": "ESCALATE", "ev": 0.56, "met": 0.09, "mat": 2.24, "conf": 0.1, "wk": "feedback", "wkr": "testing results feed back into the control environment, with remediation tracked", "wkp": 0.09}, {"id": "CPS234_7", "name": "Internal Audit", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.18, "met": 0.05, "mat": 2.81, "conf": 0.01, "wk": "retained", "wkr": "audit workpapers are retained", "wkp": 0.05}, {"id": "CPS234_8", "name": "APRA Notification", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "assessed", "wkr": "incidents are assessed against the materiality and notification threshold", "wkp": 0.02}, {"id": "CPS234_9", "name": "Third Party Risk", "framework": "APRA CPS 234", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "identified", "wkr": "information security risks arising from third parties are identified and assessed", "wkp": 0.02}, {"id": "CPS230_1", "name": "Operational Risk Management", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "framework", "wkr": "an operational risk management framework covers critical operations", "wkp": 0.02}, {"id": "CPS230_2", "name": "Business Continuity", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "documented", "wkr": "business continuity arrangements for critical operations are documented", "wkp": 0.02}, {"id": "CPS230_3", "name": "Service Provider Management", "framework": "APRA CPS 230", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "registered", "wkr": "service provider arrangements are registered", "wkp": 0.02}, {"id": "ASIC_1", "name": "AI Governance", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.16, "met": 0.06, "mat": 0.94, "conf": 0.6, "wk": "owner_named", "wkr": "each AI system has a named accountable owner", "wkp": 0.06}, {"id": "ASIC_2", "name": "Explainability", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "reviewer", "wkr": "AI-supported decisions can be explained to a reviewer", "wkp": 0.02}, {"id": "ASIC_3", "name": "Bias Testing", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.13, "met": 0.05, "mat": 1.47, "conf": 0.56, "wk": "acted", "wkr": "results outside tolerance trigger documented action", "wkp": 0.05}, {"id": "ASIC_4", "name": "Data Quality", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.04, "met": 0.02, "mat": 0, "conf": 1, "wk": "assessed", "wkr": "data used to train or operate AI is assessed as fit for purpose", "wkp": 0.02}, {"id": "ASIC_5", "name": "Consumer Protection", "framework": "ASIC 26-092MR", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "prevent", "wkr": "controls exist to prevent AI systems causing consumer harm", "wkp": 0.02}, {"id": "AI_1", "name": "AI expectation 1", "framework": "APRA AI Letter 2026", "verdict": "FAIL", "ev": 0.52, "met": 0.02, "mat": 1.95, "conf": 0.96, "wk": "monitored", "wkr": "models are monitored in production for drift and performance", "wkp": 0.02}, {"id": "AI_2", "name": "AI expectation 2", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "provenance", "wkr": "data provenance and lineage are recorded", "wkp": 0.02}, {"id": "AI_3", "name": "AI expectation 3", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "pinned", "wkr": "third-party model versions are pinned and changes are controlled", "wkp": 0.02}, {"id": "AI_4", "name": "AI expectation 4", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "detection", "wkr": "AI-specific threats are covered by detection controls", "wkp": 0.02}, {"id": "AI_5", "name": "AI expectation 5", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.1, "met": 0.05, "mat": 0.88, "conf": 0.79, "wk": "overrides", "wkr": "overrides and their rationale are recorded", "wkp": 0.05}, {"id": "AI_6", "name": "AI expectation 6", "framework": "APRA AI Letter 2026", "verdict": "INSUFFICIENT_EVIDENCE", "ev": 0.03, "met": 0.02, "mat": 0, "conf": 1, "wk": "monitored", "wkr": "AI risk is monitored continuously", "wkp": 0.02}]}}, "order": ["strong", "weak", "absent", "self_serving"], "labels": {"strong": "Strong", "weak": "Weak", "absent": "Absent", "self_serving": "Self-serving"}};
+document.getElementById('modelbadge').textContent = DATA.head.model;
+document.getElementById('footmodel').textContent = DATA.head.model;
+document.getElementById('footlib').textContent = DATA.head.libraryVersion;
+document.getElementById('footassert').textContent = DATA.head.assertionCount;
+
+let current = 'strong';
+const DEFAULT_PASS = 0.80;
+
+function verdictOf(c, passAt, floor) {
+  if (c.ev < floor) return 'INSUFFICIENT_EVIDENCE';
+  if (c.met >= passAt) return 'PASS';
+  if (c.met <= 0.20) return 'FAIL';
+  return 'ESCALATE';
+}
+
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = '';
+  DATA.order.forEach(name => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (name === current ? ' active' : '');
+    b.textContent = DATA.labels[name];
+    b.onclick = () => { current = name; render(); };
+    el.appendChild(b);
+  });
+}
+
+function render() {
+  const p = DATA.packs[current];
+  const floor = DATA.head.thresholds.evidenceFloor;
+  const passAt = Number(document.getElementById('passmk').value) / 100;
+  const s = p.summary;
+
+  document.getElementById('stats').innerHTML = [
+    ['controls', '23'],
+    ['assertions / request', DATA.head.assertionCount],
+    ['evidence records', p.records],
+    ['cost per assessment', '$' + p.cost.toFixed(6)],
+    ['server time', p.serverMs + ' ms'],
+  ].map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
+
+  let rows = '';
+  p.controls.forEach(c => {
+    const v = verdictOf(c, passAt, floor);
+    rows += `<tr>
+      <td><b>${c.id}</b></td><td style="color:var(--muted)">${c.framework}</td>
+      <td class="n">${c.ev.toFixed(2)}</td>
+      <td class="n">${c.met.toFixed(2)}</td>
+      <td class="n">${c.mat.toFixed(2)}</td>
+      <td class="n">${c.conf.toFixed(2)}</td>
+      <td><span class="v ${v}">${v === 'INSUFFICIENT_EVIDENCE' ? 'NO-EVIDENCE' : v}</span></td>
+    </tr>`;
+  });
+  document.getElementById('rows').innerHTML = rows;
+
+  const thin = p.controls.filter(c => verdictOf(c, passAt, floor) !== 'PASS')
+    .sort((a, b) => a.met - b.met);
+  document.getElementById('findings').innerHTML = thin.length
+    ? thin.map(c => {
+        const v = verdictOf(c, passAt, floor);
+        return `<div class="finding ${v === 'FAIL' ? 'fail' : ''}">
+          <div class="id"><span class="v ${v}">${v === 'INSUFFICIENT_EVIDENCE' ? 'NO-EVIDENCE' : v}</span>
+            &nbsp;${c.id} — ${c.name}</div>
+          <div class="req">${c.wk ? c.wk + ' · ' + c.wkr : 'no evidence supplied'}</div>
+          <div class="p">weakest element ${c.wkp.toFixed(2)} · control met ${c.met.toFixed(2)}</div>
+        </div>`;
+      }).join('')
+    : '<p class="note" style="margin:0">Every control passed this pack.</p>';
+  document.getElementById('findnote').textContent =
+    thin.length + ' of 23 controls below the pass mark. Maturity is the evidence of operation, ' +
+    'not the intent expressed in policy.';
+
+  document.getElementById('rp').textContent = s.pass;
+  document.getElementById('re').textContent = s.escalate;
+  document.getElementById('rf').textContent = s.fail;
+  document.getElementById('rn').textContent = s.insufficientEvidence;
+  document.getElementById('passval').textContent = passAt.toFixed(2);
+
+  let moved = 0, np = 0, ne = 0, nf = 0, nn = 0;
+  p.controls.forEach(c => {
+    const now = verdictOf(c, passAt, floor);
+    const base = verdictOf(c, DEFAULT_PASS, floor);
+    if (now !== base) moved++;
+    if (now === 'PASS') np++; else if (now === 'ESCALATE') ne++;
+    else if (now === 'FAIL') nf++; else nn++;
+  });
+  document.getElementById('rp').textContent = np;
+  document.getElementById('re').textContent = ne;
+  document.getElementById('rf').textContent = nf;
+  document.getElementById('rn').textContent = nn;
+  document.getElementById('rm').textContent = moved + ' of 23';
+  document.querySelectorAll('#rows .v').forEach(el => {});
+}
+
+document.getElementById('passmk').addEventListener('input', render);
+renderTabs();
+render();
+</script>
+</body>
+</html>
